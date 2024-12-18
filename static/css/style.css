@@ -1,0 +1,131 @@
+/* Основной макет для каталога */
+.catalog-layout {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Выдвижное меню категорий */
+.category-menu {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 80%;
+    max-width: 300px;
+    background-color: #fff;
+    border-left: 1px solid #ddd;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 1050;
+    padding: 20px;
+    overflow-y: auto; /* Добавляем прокрутку, если меню больше экрана */
+}
+
+/* Показываем меню, когда добавлен класс active */
+.category-menu.active {
+    transform: translateX(0);
+}
+
+/* Кнопка категории */
+.category-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+/* Делаем меню скрытым на десктопе */
+@media (min-width: 768px) {
+    .category-menu {
+        display: none;
+    }
+}
+
+
+
+/* Боковое меню фильтров для десктопа */
+.sidebar-filters {
+    width: 20%;
+}
+
+.product-list {
+    width: 100%;
+}
+
+
+/* Секция товаров */
+.products-list {
+    width: 80%;                /* Занимает 80% ширины на ПК */
+}
+
+/* Стили для карточки товара */
+.product-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-align: center;
+    background-color: #fff;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.product-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-card .card-body {
+    padding: 15px;
+}
+
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 768px) {
+    /* Категории над товарами на мобильных */
+    .categories-list {
+        width: 100%;
+        order: -1; /* Перемещаем секцию категорий над товарами */
+        margin-bottom: 20px;
+    }
+
+    .products-list {
+        width: 100%;
+    }
+
+    /* Квадратные изображения на мобильных */
+    .product-card img {
+        height: 150px;
+    }
+
+    /* Уменьшение шрифта и размеров на мобильных */
+    .product-card .card-title {
+        font-size: 1rem;
+    }
+
+    .product-card .card-text, .category-btn {
+        font-size: 0.9rem;
+    }
+}
+
+.cart-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    flex-wrap: wrap; /* Для адаптивности на мобильных устройствах */
+}
+
+/* Итоговая сумма */
+.cart-total {
+    margin-left: auto; /* Выравнивает текст вправо */
+    font-size: 1.25rem;
+    font-weight: bold;
+}

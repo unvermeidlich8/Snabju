@@ -1,0 +1,19 @@
+{{range .Products}}
+<div class="col-6 col-sm-6 col-md-4 col-lg-3 mb-4">
+    <div class="product-card card">
+        <img src="{{.ImageURL}}" alt="{{.Name}}" class="card-img-top">
+        <div class="card-body">
+            <h5 class="card-title">{{.Name}}</h5>
+            <p class="card-text">{{.Description}}</p>
+            <p class="card-text">Цена: {{.Price}} руб.</p>
+            <form hx-post="/cart/add"
+                  hx-target="#notification-container"
+                  hx-swap="innerHTML">
+                <input type="hidden" name="product_id" value="{{.ID}}">
+                <input type="number" name="quantity" value="1" min="1" class="form-control mb-2" style="width: 80px;">
+                <button type="submit" class="btn btn-primary w-100">Добавить в корзину</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
