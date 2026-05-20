@@ -1,0 +1,36 @@
+.claude
+
+# Бинарники
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Тестовые файлы
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Зависимости (если используешь vendor)
+vendor/
+
+# IDE GoLand / IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Логи и переменные окружения
+*.log
+.env
+.env.local
