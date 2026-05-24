@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"Snabju/backend/internal/crypto"
+	appkafka "Snabju/backend/internal/kafka"
+	"Snabju/backend/internal/mailer"
 	appredis "Snabju/backend/internal/redis"
 	"Snabju/backend/internal/repository/postgres"
 	"Snabju/backend/internal/service"
@@ -64,13 +66,22 @@ func main() {
 	// --- Infrastructure ---
 	hasher := crypto.BcryptHasher{}
 	sessionStore := appredis.NewSessionStore(redisClient, cfg.sessionTTL)
+	producer := appkafka.NewProducer(cfg.kafkaBrokers)
+	defer producer.Close()
+
+	m := mailer.New(cfg.smtpHost, cfg.smtpPort, cfg.smtpUser, cfg.smtpPass, cfg.smtpFrom, cfg.smtpTLS)
 
 	// --- Services ---
-	userSvc := service.NewUserService(userRepo, cartRepo, hasher, sessionStore)
+	userSvc := service.NewUserService(userRepo, cartRepo, hasher, sessionStore, producer)
 	categorySvc := service.NewCategoryService(categoryRepo)
 	productSvc := service.NewProductService(productRepo)
 	cartSvc := service.NewCartService(cartRepo)
-	orderSvc := service.NewOrderService(orderRepo)
+	orderSvc := service.NewOrderService(orderRepo, userRepo, producer)
+
+	// --- Kafka consumers ---
+	notificationConsumer := appkafka.NewNotificationConsumer(cfg.kafkaBrokers, m)
+	go notificationConsumer.Run(context.Background())
+	defer notificationConsumer.Close()
 
 	// --- Handlers ---
 	authHandler := handler.NewAuthHandler(userSvc)
@@ -127,6 +138,13 @@ type config struct {
 	redisAddr      string
 	sessionTTL     time.Duration
 	allowedOrigins []string
+	kafkaBrokers   []string
+	smtpHost       string
+	smtpPort       int
+	smtpUser       string
+	smtpPass       string
+	smtpFrom       string
+	smtpTLS        mailer.TLSPolicy
 }
 
 func loadConfig() config {
@@ -135,6 +153,12 @@ func loadConfig() config {
 		dbURL:          requireEnv("DB_URL"),
 		redisAddr:      getEnv("REDIS_URL", "localhost:6379"),
 		allowedOrigins: strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		kafkaBrokers:   strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
+		smtpHost:       getEnv("SMTP_HOST", "localhost"),
+		smtpUser:       getEnv("SMTP_USER", ""),
+		smtpPass:       getEnv("SMTP_PASS", ""),
+		smtpFrom:       getEnv("SMTP_FROM", "noreply@snabju.ru"),
+		smtpTLS:        mailer.ParseTLSPolicy(getEnv("SMTP_TLS", "none")),
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")
@@ -142,6 +166,13 @@ func loadConfig() config {
 		cfg.sessionTTL = time.Duration(h) * time.Hour
 	} else {
 		cfg.sessionTTL = 720 * time.Hour
+	}
+
+	smtpPort := getEnv("SMTP_PORT", "1025")
+	if p, err := strconv.Atoi(smtpPort); err == nil {
+		cfg.smtpPort = p
+	} else {
+		cfg.smtpPort = 1025
 	}
 
 	return cfg

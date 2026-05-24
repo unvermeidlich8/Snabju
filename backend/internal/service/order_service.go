@@ -3,7 +3,9 @@ package service
 import (
 	"Snabju/backend/internal/domain"
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
@@ -11,10 +13,16 @@ import (
 
 type orderService struct {
 	orderRepo domain.OrderRepository
+	userRepo  domain.UserRepository
+	publisher domain.EventPublisher
 }
 
-func NewOrderService(orderRepo domain.OrderRepository) domain.OrderService {
-	return &orderService{orderRepo: orderRepo}
+func NewOrderService(orderRepo domain.OrderRepository, userRepo domain.UserRepository, publisher domain.EventPublisher) domain.OrderService {
+	return &orderService{
+		orderRepo: orderRepo,
+		userRepo:  userRepo,
+		publisher: publisher,
+	}
 }
 
 func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Order, error) {
@@ -37,7 +45,38 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	if err := s.orderRepo.Create(ctx, o); err != nil {
 		return nil, fmt.Errorf("orderService.Create: %w", err)
 	}
+
+	s.publishOrderConfirmed(ctx, o)
+
 	return o, nil
+}
+
+func (s *orderService) publishOrderConfirmed(ctx context.Context, o *domain.Order) {
+	var email *string
+	if o.UserID != nil {
+		if user, err := s.userRepo.GetByID(ctx, *o.UserID); err == nil {
+			email = user.Email
+		}
+	}
+
+	payload, err := json.Marshal(domain.OrderConfirmedPayload{
+		OrderID:      o.ID.String(),
+		ContactName:  o.ContactName,
+		ContactPhone: o.ContactPhone,
+		Address:      o.Address,
+		Email:        email,
+		Total:        o.Total,
+	})
+	if err != nil {
+		slog.Error("order: marshal event payload", "err", err)
+		return
+	}
+	if err := s.publisher.Publish(ctx, "notifications", domain.Event{
+		Type:    domain.EventOrderConfirmed,
+		Payload: payload,
+	}); err != nil {
+		slog.Error("order: publish event", "err", err)
+	}
 }
 
 func (s *orderService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {

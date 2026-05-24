@@ -3,7 +3,9 @@ package service
 import (
 	"Snabju/backend/internal/domain"
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
@@ -14,21 +16,27 @@ type userService struct {
 	cartRepo     domain.CartRepository
 	hasher       domain.PasswordHasher
 	sessionStore domain.SessionStore
+	publisher    domain.EventPublisher
 }
 
-func NewUserService(userRepo domain.UserRepository, cartRepo domain.CartRepository, hasher domain.PasswordHasher, sessionStore domain.SessionStore) domain.UserService {
+func NewUserService(userRepo domain.UserRepository, cartRepo domain.CartRepository, hasher domain.PasswordHasher, sessionStore domain.SessionStore, publisher domain.EventPublisher) domain.UserService {
 	return &userService{
 		userRepo:     userRepo,
 		cartRepo:     cartRepo,
 		hasher:       hasher,
 		sessionStore: sessionStore,
+		publisher:    publisher,
 	}
 }
 
-func (s *userService) Register(ctx context.Context, phone, password string) (*domain.User, string, error) {
+func (s *userService) Register(ctx context.Context, phone, email, password string) (*domain.User, string, error) {
 	phone = strings.TrimSpace(phone)
 	if len(phone) < 11 || (!strings.HasPrefix(phone, "+7") && !strings.HasPrefix(phone, "8")) {
 		return nil, "", domain.ErrValidation{Field: "phone", Msg: "must start with +7 or 8 and be at least 11 digits"}
+	}
+	email = strings.TrimSpace(email)
+	if !strings.Contains(email, "@") {
+		return nil, "", domain.ErrValidation{Field: "email", Msg: "invalid format"}
 	}
 	if len(password) < 8 {
 		return nil, "", domain.ErrValidation{Field: "password", Msg: "min 8 characters"}
@@ -41,6 +49,7 @@ func (s *userService) Register(ctx context.Context, phone, password string) (*do
 
 	user := &domain.User{
 		Phone:        &phone,
+		Email:        &email,
 		PasswordHash: hash,
 	}
 
@@ -53,7 +62,27 @@ func (s *userService) Register(ctx context.Context, phone, password string) (*do
 		return nil, "", fmt.Errorf("register: create session: %w", err)
 	}
 
+	s.publishUserRegistered(ctx, user)
+
 	return user, sessionID, nil
+}
+
+func (s *userService) publishUserRegistered(ctx context.Context, user *domain.User) {
+	payload, err := json.Marshal(domain.UserRegisteredPayload{
+		UserID: user.ID.String(),
+		Phone:  *user.Phone,
+		Email:  user.Email,
+	})
+	if err != nil {
+		slog.Error("register: marshal event payload", "err", err)
+		return
+	}
+	if err := s.publisher.Publish(ctx, "notifications", domain.Event{
+		Type:    domain.EventUserRegistered,
+		Payload: payload,
+	}); err != nil {
+		slog.Error("register: publish event", "err", err)
+	}
 }
 
 func (s *userService) Logout(ctx context.Context, sessionID string) error {
