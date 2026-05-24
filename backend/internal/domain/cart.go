@@ -23,7 +23,14 @@ type CartRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListBySession(ctx context.Context, sessionID string) ([]CartItem, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]CartItem, error)
-	// MigrateSession переносит анонимную корзину к пользователю при регистрации
 	MigrateSession(ctx context.Context, sessionID string, userID uuid.UUID) error
+	Clear(ctx context.Context, userID uuid.UUID) error
+}
+
+type CartService interface {
+	AddItem(ctx context.Context, sessionID string, userID *uuid.UUID, productID uuid.UUID, qty int, asPallet bool) (*CartItem, error)
+	UpdateItem(ctx context.Context, itemID uuid.UUID, qty int) error
+	RemoveItem(ctx context.Context, itemID uuid.UUID) error
+	GetItems(ctx context.Context, sessionID string, userID *uuid.UUID) ([]CartItem, error)
 	Clear(ctx context.Context, userID uuid.UUID) error
 }

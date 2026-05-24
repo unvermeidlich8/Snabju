@@ -18,3 +18,8 @@ type CategoryRepository interface {
 	List(ctx context.Context) ([]Category, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Category, error)
 }
+
+type CategoryService interface {
+	List(ctx context.Context) ([]Category, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*Category, error)
+}

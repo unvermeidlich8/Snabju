@@ -38,3 +38,11 @@ type OrderRepository interface {
 	ListBySessionID(ctx context.Context, sessionID string) ([]Order, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, kind OrderStatus, status string) error
 }
+
+type OrderService interface {
+	Create(ctx context.Context, o *Order) (*Order, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*Order, error)
+	ListByUser(ctx context.Context, userID uuid.UUID) ([]Order, error)
+	ListBySession(ctx context.Context, sessionID string) ([]Order, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, kind OrderStatus, status string) error
+}
