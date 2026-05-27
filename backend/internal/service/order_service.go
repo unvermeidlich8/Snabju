@@ -2,6 +2,7 @@ package service
 
 import (
 	"Snabju/backend/internal/domain"
+	"Snabju/backend/internal/metrics"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -47,6 +48,7 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	}
 
 	s.publishOrderConfirmed(ctx, o)
+	metrics.OrdersCreatedTotal.Inc()
 
 	return o, nil
 }

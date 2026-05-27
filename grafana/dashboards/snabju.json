@@ -1,0 +1,446 @@
+{
+  "uid": "snabju-ops",
+  "title": "Snabju — Operations",
+  "tags": ["snabju"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "timepicker": {},
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "HTTP",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Request Rate by Route",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(snabju_http_requests_total[5m]))",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Error Rate (4xx / 5xx)",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(snabju_http_requests_total{status=~\"4..\"}[5m]))",
+          "legendFormat": "4xx",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(snabju_http_requests_total{status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "5xx" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "4xx" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Request Duration (p50 / p95 / p99)",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(snabju_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(snabju_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(snabju_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Go Runtime",
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Goroutines",
+      "gridPos": { "x": 0, "y": 18, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [{ "expr": "go_goroutines", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Heap Alloc",
+      "gridPos": { "x": 6, "y": 18, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [{ "expr": "go_memstats_heap_alloc_bytes", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "GC Pause p99",
+      "gridPos": { "x": 12, "y": 18, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(go_gc_duration_seconds_bucket[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Open File Descriptors",
+      "gridPos": { "x": 18, "y": 18, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [{ "expr": "process_open_fds", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Business — Live (Prometheus)",
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Orders Created (uptime)",
+      "gridPos": { "x": 0, "y": 23, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [{ "expr": "snabju_orders_created_total", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Users Registered (uptime)",
+      "gridPos": { "x": 8, "y": 23, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [{ "expr": "snabju_users_registered_total", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Orders per Hour",
+      "gridPos": { "x": 16, "y": 23, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "snabju-prometheus" },
+      "targets": [
+        {
+          "expr": "increase(snabju_orders_created_total[1h])",
+          "legendFormat": "orders/h",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 20 }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "hidden" }
+      }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Business — Database (PostgreSQL)",
+      "gridPos": { "x": 0, "y": 27, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "Revenue Today",
+      "gridPos": { "x": 0, "y": 28, "w": 8, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "snabju-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT COALESCE(SUM(total), 0) AS value FROM orders WHERE created_at >= CURRENT_DATE",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Orders Today",
+      "gridPos": { "x": 8, "y": 28, "w": 8, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "snabju-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) AS value FROM orders WHERE created_at >= CURRENT_DATE",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "New Users Today",
+      "gridPos": { "x": 16, "y": 28, "w": 8, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "snabju-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) AS value FROM users WHERE created_at >= CURRENT_DATE",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 34,
+      "type": "table",
+      "title": "Orders by Status",
+      "gridPos": { "x": 0, "y": 32, "w": 10, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "snabju-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT status, status_kind, count(*) AS count, COALESCE(SUM(total), 0) AS revenue FROM orders GROUP BY status, status_kind ORDER BY count DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "options": { "showHeader": true, "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "revenue" },
+            "properties": [{ "id": "unit", "value": "locale" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 35,
+      "type": "table",
+      "title": "Recent Orders",
+      "gridPos": { "x": 10, "y": 32, "w": 14, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "snabju-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at, contact_name, contact_phone, total, status FROM orders ORDER BY created_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "options": { "showHeader": true },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "total" },
+            "properties": [{ "id": "unit", "value": "locale" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "created_at" },
+            "properties": [
+              { "id": "unit", "value": "dateTimeFromNow" },
+              { "id": "custom.width", "value": 130 }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ package service
 
 import (
 	"Snabju/backend/internal/domain"
+	"Snabju/backend/internal/metrics"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -63,6 +64,7 @@ func (s *userService) Register(ctx context.Context, phone, email, password strin
 	}
 
 	s.publishUserRegistered(ctx, user)
+	metrics.UsersRegisteredTotal.Inc()
 
 	return user, sessionID, nil
 }

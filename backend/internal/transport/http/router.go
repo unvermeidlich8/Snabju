@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func NewRouter(
@@ -27,7 +28,10 @@ func NewRouter(
 	r.Use(chimiddleware.Timeout(30 * time.Second))
 	r.Use(appmiddleware.CORS(allowedOrigins))
 	r.Use(appmiddleware.Logger)
+	r.Use(appmiddleware.Metrics)
 	r.Use(appmiddleware.Session(sessionStore))
+
+	r.Handle("/metrics", promhttp.Handler())
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/auth/register", auth.Register)

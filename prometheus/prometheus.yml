@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: snabju_backend
+    # Backend runs on host (not in Docker). On Linux replace with host IP.
+    # When backend is added to docker-compose, change to: backend:8080
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+    metrics_path: /metrics
