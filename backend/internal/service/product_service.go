@@ -45,3 +45,28 @@ func (s *productService) GetBySKU(ctx context.Context, sku string) (*domain.Prod
 	}
 	return product, nil
 }
+
+func (s *productService) Create(ctx context.Context, in domain.CreateProductInput) (*domain.Product, error) {
+	if in.Title == "" {
+		return nil, domain.ErrValidation{Field: "title", Msg: "required"}
+	}
+	if in.Price <= 0 {
+		return nil, domain.ErrValidation{Field: "price", Msg: "must be positive"}
+	}
+	if in.PriceBox != nil && *in.PriceBox > 0 && in.BoxQty <= 0 {
+		return nil, domain.ErrValidation{Field: "box_qty", Msg: "required when price_box is set"}
+	}
+	product, err := s.productRepo.Create(ctx, in)
+	if err != nil {
+		return nil, fmt.Errorf("productService.Create: %w", err)
+	}
+	return product, nil
+}
+
+func (s *productService) ListBrands(ctx context.Context) ([]string, error) {
+	brands, err := s.productRepo.ListBrands(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("productService.ListBrands: %w", err)
+	}
+	return brands, nil
+}

@@ -22,8 +22,8 @@ function TabIcon({ k, on }: { k: string; on: boolean }) {
 
 export function TabBar() {
   const pathname = usePathname();
-  const { cart } = useCart();
-  const cartCount = cart.reduce((s, c) => s + c.qty, 0);
+  const { items } = useCart();
+  const cartCount = items.reduce((s, c) => s + c.qty, 0);
 
   const activeId = pathname === '/' ? 'home' : tabs.find(t => t.href !== '/' && pathname.startsWith(t.href))?.id ?? 'home';
 

@@ -1,11 +1,21 @@
 export type Mode = 'b2c' | 'b2b';
 
+export type ProductTag = 'Хит' | 'Акция' | 'Новинка' | null;
+export type ProductUnit = 'уп' | 'рул' | 'шт' | 'лист';
+export type CatIcon = 'wool' | 'xps' | 'can' | 'tube' | 'roll' | 'block' | 'sheet' | 'tool';
+
 export interface Category {
   id: string;
   title: string;
-  count: number;
   swatch: string;
   icon: string;
+  imageUrl: string;
+  sortOrder: number;
+}
+
+export interface ProductSpec {
+  key: string;
+  value: string;
 }
 
 export interface Product {
@@ -13,37 +23,58 @@ export interface Product {
   sku: string;
   title: string;
   sub: string;
-  cat: string;
+  categoryId: string;
   catLabel: string;
+  swatch: string;
   unit: string;
   unitDetail: string;
   price: number;
   oldPrice: number | null;
-  pricePallet: number;
-  palletQty: number;
+  priceBox: number | null;
+  boxQty: number;
   stock: number;
   stockUnit: string;
   eta: string;
   rating: number;
   reviews: number;
-  tag: string | null;
-  specs: [string, string][];
+  tag: ProductTag;
+  imageUrl: string;
+  specs: ProductSpec[];
 }
 
 export interface CartItem {
   id: string;
+  productId: string;
   qty: number;
   asPallet: boolean;
 }
 
+export interface EnrichedCartItem extends CartItem {
+  product: Product;
+}
+
 export interface Order {
   id: string;
-  date: string;
   status: string;
-  statusKind: 'progress' | 'done' | 'pending';
-  items: number;
+  statusKind: 'pending' | 'progress' | 'done';
+  itemsCount: number;
   total: number;
   eta: string | null;
+  contactName: string;
+  contactPhone: string;
+  address: string;
+  createdAt: string;
+}
+
+export interface User {
+  id: string;
+  phone: string;
+  email: string | null;
+  name: string;
+  isB2b: boolean;
+  isAdmin: boolean;
+  company: string | null;
+  createdAt: string;
 }
 
 export interface Promo {
@@ -51,21 +82,4 @@ export interface Promo {
   title: string;
   sub: string;
   accent: boolean;
-}
-
-export interface FilterData {
-  thickness: string[];
-  density: string[];
-  brands: string[];
-  flammable: string[];
-}
-
-export interface StoreData {
-  brand: { name: string; tagline: string; address: string; phone: string };
-  categories: Category[];
-  products: Product[];
-  promos: Promo[];
-  orders: Order[];
-  cart: CartItem[];
-  filters: FilterData;
 }

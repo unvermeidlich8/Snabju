@@ -89,6 +89,8 @@ func main() {
 	cartHandler := handler.NewCartHandler(cartSvc)
 	orderHandler := handler.NewOrderHandler(orderSvc)
 	profileHandler := handler.NewProfileHandler(userSvc)
+	adminHandler := handler.NewAdminHandler(categorySvc, productSvc)
+	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
 
 	// --- Router ---
 	router := server.NewRouter(
@@ -97,7 +99,11 @@ func main() {
 		cartHandler,
 		orderHandler,
 		profileHandler,
+		adminHandler,
+		uploadHandler,
 		sessionStore,
+		userRepo,
+		cfg.uploadsDir,
 		cfg.allowedOrigins,
 	)
 
@@ -145,6 +151,8 @@ type config struct {
 	smtpPass       string
 	smtpFrom       string
 	smtpTLS        mailer.TLSPolicy
+	uploadsDir     string
+	publicBaseURL  string
 }
 
 func loadConfig() config {
@@ -159,6 +167,8 @@ func loadConfig() config {
 		smtpPass:       getEnv("SMTP_PASS", ""),
 		smtpFrom:       getEnv("SMTP_FROM", "noreply@snabju.ru"),
 		smtpTLS:        mailer.ParseTLSPolicy(getEnv("SMTP_TLS", "none")),
+		uploadsDir:     getEnv("UPLOADS_DIR", "./uploads"),
+		publicBaseURL:  getEnv("PUBLIC_BASE_URL", "http://localhost:8080"),
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")

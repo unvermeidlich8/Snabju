@@ -1,44 +1,67 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState } from 'react';
-import type { CartItem } from '@/lib/types';
-import { SNABJU_DATA } from '@/lib/data';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import { useAuth } from './AuthProvider';
+import type { EnrichedCartItem } from '@/lib/types';
 
 interface CartContextValue {
-  cart: CartItem[];
-  addToCart: (id: string, qty: number) => void;
-  updateQty: (id: string, newQty: number) => void;
-  removeFromCart: (id: string) => void;
-  setCart: (cart: CartItem[]) => void;
+  items: EnrichedCartItem[];
+  loading: boolean;
+  addToCart: (productId: string, qty: number, asPallet?: boolean) => Promise<void>;
+  updateQty: (cartItemId: string, qty: number) => Promise<void>;
+  removeFromCart: (cartItemId: string) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCartState] = useState<CartItem[]>(SNABJU_DATA.cart);
+  const { user } = useAuth();
+  const [items, setItems] = useState<EnrichedCartItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const setCart = useCallback((newCart: CartItem[]) => {
-    setCartState(newCart);
+  const refresh = useCallback(async () => {
+    try {
+      const cartItems = await api.getCart();
+      if (cartItems.length === 0) { setItems([]); return; }
+      const products = await Promise.all(
+        cartItems.map(ci => api.getProduct(ci.productId).catch(() => null))
+      );
+      const enriched: EnrichedCartItem[] = cartItems
+        .map((ci, i) => products[i] ? { ...ci, product: products[i]! } : null)
+        .filter((x): x is EnrichedCartItem => x !== null);
+      setItems(enriched);
+    } catch {
+      setItems([]);
+    }
   }, []);
 
-  const addToCart = useCallback((id: string, qty: number) => {
-    setCartState(cs => {
-      const existing = cs.find(c => c.id === id);
-      if (existing) return cs.map(c => c.id === id ? { ...c, qty: c.qty + qty } : c);
-      return [...cs, { id, qty, asPallet: false }];
-    });
+  // Re-fetch cart when auth state changes (login/logout)
+  useEffect(() => {
+    setLoading(true);
+    refresh().finally(() => setLoading(false));
+  }, [user, refresh]);
+
+  const addToCart = useCallback(async (productId: string, qty: number, asPallet = false) => {
+    await api.addCartItem(productId, qty, asPallet);
+    await refresh();
+  }, [refresh]);
+
+  const updateQty = useCallback(async (cartItemId: string, qty: number) => {
+    if (qty < 1) return;
+    await api.updateCartItem(cartItemId, qty);
+    // Optimistic local update
+    setItems(prev => prev.map(it => it.id === cartItemId ? { ...it, qty } : it));
   }, []);
 
-  const updateQty = useCallback((id: string, newQty: number) => {
-    setCartState(cs => cs.map(c => c.id === id ? { ...c, qty: Math.max(1, newQty) } : c));
-  }, []);
-
-  const removeFromCart = useCallback((id: string) => {
-    setCartState(cs => cs.filter(c => c.id !== id));
+  const removeFromCart = useCallback(async (cartItemId: string) => {
+    await api.removeCartItem(cartItemId);
+    setItems(prev => prev.filter(it => it.id !== cartItemId));
   }, []);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, updateQty, removeFromCart, setCart }}>
+    <CartContext.Provider value={{ items, loading, addToCart, updateQty, removeFromCart, refresh }}>
       {children}
     </CartContext.Provider>
   );

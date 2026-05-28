@@ -14,15 +14,16 @@ var (
 )
 
 type User struct {
-	ID           uuid.UUID
-	Phone        *string
-	Email        *string
-	Name         string
-	PasswordHash string
-	IsB2B        bool
-	Company      string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID `json:"id"`
+	Phone        *string   `json:"phone"`
+	Email        *string   `json:"email"`
+	Name         string    `json:"name"`
+	PasswordHash string    `json:"-"`
+	IsB2B        bool      `json:"is_b2b"`
+	IsAdmin      bool      `json:"is_admin"`
+	Company      string    `json:"company"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type UserRepository interface {

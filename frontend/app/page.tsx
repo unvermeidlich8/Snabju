@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SNABJU_DATA } from '@/lib/data';
+import { api } from '@/lib/api';
 import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { BrandMark } from '@/components/ui/BrandMark';
@@ -9,12 +10,22 @@ import { ModeChip } from '@/components/ui/ModeChip';
 import { CatTile } from '@/components/ui/CatTile';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ProductCardSmall } from '@/components/cards/ProductCardSmall';
+import type { Category, Product } from '@/lib/types';
 
 export default function HomePage() {
   const router = useRouter();
   const { mode } = useMode();
   const { addToCart } = useCart();
-  const D = SNABJU_DATA;
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    api.getCategories().then(cats => {
+      setCategories(cats);
+      return api.getProducts({ limit: 6 });
+    }).then(res => setProducts(res.items)).catch(() => {});
+  }, []);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -57,49 +68,28 @@ export default function HomePage() {
       {/* Promo banner */}
       <div className="px-4 pb-5">
         {mode === 'b2b' ? (
-          <div
-            className="relative overflow-hidden rounded-[18px] p-[18px] text-white"
-            style={{ background: '#1a1a1a' }}
-          >
-            <div
-              className="absolute -right-8 -top-8 w-36 h-36 rounded-full opacity-20"
-              style={{ background: '#ff6a13' }}
-            />
+          <div className="relative overflow-hidden rounded-[18px] p-[18px] text-white" style={{ background: '#1a1a1a' }}>
+            <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full opacity-20" style={{ background: '#ff6a13' }} />
             <div className="relative">
-              <div className="text-[11px] font-mono tracking-[1px] uppercase text-accent mb-1.5">
-                Корпоративный счёт
-              </div>
+              <div className="text-[11px] font-mono tracking-[1px] uppercase text-accent mb-1.5">Корпоративный счёт</div>
               <div className="text-[22px] font-bold leading-tight mb-2.5" style={{ letterSpacing: '-0.5px' }}>
                 Отсрочка 14 дней<br />и закреплённый менеджер
               </div>
               <div className="flex gap-2 items-center">
-                <button className="bg-white text-ink px-3.5 py-2 rounded-[10px] text-[13px] font-semibold cursor-pointer">
-                  Подключить
-                </button>
+                <button className="bg-white text-ink px-3.5 py-2 rounded-[10px] text-[13px] font-semibold cursor-pointer">Подключить</button>
                 <span className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>≈ 8 минут</span>
               </div>
             </div>
           </div>
         ) : (
-          <div
-            className="relative overflow-hidden rounded-[18px] p-[18px] text-white"
-            style={{ background: '#ff6a13' }}
-          >
-            <div
-              className="absolute inset-0"
-              style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent 0 14px, rgba(255,255,255,0.08) 14px 15px)' }}
-            />
+          <div className="relative overflow-hidden rounded-[18px] p-[18px] text-white" style={{ background: '#ff6a13' }}>
+            <div className="absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent 0 14px, rgba(255,255,255,0.08) 14px 15px)' }} />
             <div className="relative">
-              <div className="text-[11px] font-mono tracking-[1px] uppercase mb-1.5 opacity-85">
-                Акция недели
-              </div>
+              <div className="text-[11px] font-mono tracking-[1px] uppercase mb-1.5 opacity-85">Акция недели</div>
               <div className="text-2xl font-bold leading-tight mb-2.5" style={{ letterSpacing: '-0.5px' }}>
                 Минвата Rockwool<br />−15% на паллету
               </div>
-              <button
-                onClick={() => router.push('/catalog')}
-                className="bg-white text-ink px-3.5 py-2 rounded-[10px] text-[13px] font-semibold cursor-pointer"
-              >
+              <button onClick={() => router.push('/catalog')} className="bg-white text-ink px-3.5 py-2 rounded-[10px] text-[13px] font-semibold cursor-pointer">
                 Смотреть →
               </button>
             </div>
@@ -110,16 +100,8 @@ export default function HomePage() {
       {/* Trust stats */}
       <div className="px-4 pb-6">
         <div className="grid grid-cols-3 gap-2 bg-white border border-divider rounded-[14px] py-3 px-1">
-          {[
-            ['Сегодня', 'если до 14:00'],
-            ['12 лет', 'на рынке'],
-            ['4.9 ★', '2 184 отзыва'],
-          ].map(([a, b], i) => (
-            <div
-              key={i}
-              className="text-center px-2"
-              style={{ borderLeft: i ? '1px solid #e7e3da' : 'none' }}
-            >
+          {[['Сегодня', 'если до 14:00'], ['12 лет', 'на рынке'], ['4.9 ★', '2 184 отзыва']].map(([a, b], i) => (
+            <div key={i} className="text-center px-2" style={{ borderLeft: i ? '1px solid #e7e3da' : 'none' }}>
               <div className="text-sm font-bold text-ink" style={{ letterSpacing: '-0.2px' }}>{a}</div>
               <div className="text-[10.5px] text-muted mt-0.5">{b}</div>
             </div>
@@ -128,27 +110,35 @@ export default function HomePage() {
       </div>
 
       {/* Categories */}
-      <SectionHeader title="Категории" action="всё" onAction={() => router.push('/catalog')} />
-      <div className="grid grid-cols-3 gap-3 px-4 pb-6">
-        {D.categories.slice(0, 6).map(c => (
-          <CatTile key={c.id} cat={c} onClick={() => router.push('/catalog')} />
-        ))}
-      </div>
+      {categories.length > 0 && (
+        <>
+          <SectionHeader title="Категории" action="всё" onAction={() => router.push('/catalog')} />
+          <div className="grid grid-cols-3 gap-3 px-4 pb-6">
+            {categories.slice(0, 6).map(c => (
+              <CatTile key={c.id} cat={c} onClick={() => router.push(`/catalog?category=${c.id}`)} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Hits */}
-      <SectionHeader title="Хиты склада" action="всё" onAction={() => router.push('/catalog')} />
-      <div className="flex gap-3 overflow-x-auto px-4 pb-6 scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
-        {D.products.slice(0, 4).map(p => (
-          <div key={p.id} className="shrink-0 w-[200px]" style={{ scrollSnapAlign: 'start' }}>
-            <ProductCardSmall
-              p={p}
-              mode={mode}
-              onClick={() => router.push(`/product/${p.id}`)}
-              onAddToCart={() => addToCart(p.id, 1)}
-            />
+      {products.length > 0 && (
+        <>
+          <SectionHeader title="Хиты склада" action="всё" onAction={() => router.push('/catalog')} />
+          <div className="flex gap-3 overflow-x-auto px-4 pb-6 scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
+            {products.map(p => (
+              <div key={p.id} className="shrink-0 w-[200px]" style={{ scrollSnapAlign: 'start' }}>
+                <ProductCardSmall
+                  p={p}
+                  mode={mode}
+                  onClick={() => router.push(`/product/${p.id}`)}
+                  onAddToCart={() => addToCart(p.id, 1)}
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {/* Calculator teaser */}
       <div className="px-4 pb-6">
@@ -160,12 +150,8 @@ export default function HomePage() {
             </svg>
           </div>
           <div className="flex-1">
-            <div className="text-[15px] font-bold text-ink" style={{ letterSpacing: '-0.2px' }}>
-              Калькулятор утеплителя
-            </div>
-            <div className="text-xs text-muted mt-0.5">
-              Площадь, толщина → нужное число упаковок
-            </div>
+            <div className="text-[15px] font-bold text-ink" style={{ letterSpacing: '-0.2px' }}>Калькулятор утеплителя</div>
+            <div className="text-xs text-muted mt-0.5">Площадь, толщина → нужное число упаковок</div>
           </div>
           <svg width="12" height="20" viewBox="0 0 12 20">
             <path d="M2 2l8 8-8 8" fill="none" stroke="#a8a39a" strokeWidth="2" strokeLinecap="round"/>

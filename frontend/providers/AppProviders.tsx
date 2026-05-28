@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { AuthProvider } from './AuthProvider';
 import { CartProvider } from './CartProvider';
 import { ModeProvider } from './ModeProvider';
 import { TabBar } from '@/components/layout/TabBar';
@@ -13,14 +14,16 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <ModeProvider>
-      <CartProvider>
-        <div className="min-h-screen bg-brand">
-          <div className={showTabBar ? 'pb-[84px]' : ''}>
-            {children}
+      <AuthProvider>
+        <CartProvider>
+          <div className="min-h-screen bg-brand">
+            <div className={showTabBar ? 'pb-[84px]' : ''}>
+              {children}
+            </div>
+            {showTabBar && <TabBar />}
           </div>
-          {showTabBar && <TabBar />}
-        </div>
-      </CartProvider>
+        </CartProvider>
+      </AuthProvider>
     </ModeProvider>
   );
 }

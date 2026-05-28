@@ -23,6 +23,7 @@ type profileResponse struct {
 	Email     *string   `json:"email"`
 	Name      string    `json:"name"`
 	IsB2B     bool      `json:"is_b2b"`
+	IsAdmin   bool      `json:"is_admin"`
 	Company   string    `json:"company"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -34,6 +35,7 @@ func toProfileResponse(u *domain.User) profileResponse {
 		Email:     u.Email,
 		Name:      u.Name,
 		IsB2B:     u.IsB2B,
+		IsAdmin:   u.IsAdmin,
 		Company:   u.Company,
 		CreatedAt: u.CreatedAt,
 	}

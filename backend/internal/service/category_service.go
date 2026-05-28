@@ -31,3 +31,14 @@ func (s *categoryService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Ca
 	}
 	return category, nil
 }
+
+func (s *categoryService) Create(ctx context.Context, in domain.CreateCategoryInput) (*domain.Category, error) {
+	if in.Title == "" {
+		return nil, domain.ErrValidation{Field: "title", Msg: "required"}
+	}
+	cat, err := s.categoryRepo.Create(ctx, in)
+	if err != nil {
+		return nil, fmt.Errorf("categoryService.Create: %w", err)
+	}
+	return cat, nil
+}

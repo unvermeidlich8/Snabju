@@ -18,7 +18,11 @@ func NewRouter(
 	cart *handler.CartHandler,
 	order *handler.OrderHandler,
 	profile *handler.ProfileHandler,
+	admin *handler.AdminHandler,
+	upload *handler.UploadHandler,
 	sessionStore domain.SessionStore,
+	userRepo domain.UserRepository,
+	uploadsDir string,
 	allowedOrigins []string,
 ) http.Handler {
 	r := chi.NewRouter()
@@ -32,6 +36,9 @@ func NewRouter(
 	r.Use(appmiddleware.Session(sessionStore))
 
 	r.Handle("/metrics", promhttp.Handler())
+
+	// Serve uploaded files publicly
+	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(uploadsDir))))
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/auth/register", auth.Register)
@@ -53,6 +60,14 @@ func NewRouter(
 
 		r.Get("/profile", profile.GetProfile)
 		r.Patch("/profile", profile.UpdateProfile)
+
+		r.Group(func(r chi.Router) {
+			r.Use(appmiddleware.AdminOnly(userRepo))
+			r.Post("/admin/upload", upload.Upload)
+			r.Post("/admin/categories", admin.CreateCategory)
+			r.Get("/admin/brands", admin.ListBrands)
+			r.Post("/admin/products", admin.CreateProduct)
+		})
 	})
 
 	return r

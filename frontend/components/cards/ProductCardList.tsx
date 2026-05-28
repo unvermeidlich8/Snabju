@@ -19,7 +19,7 @@ export function ProductCardList({ p, mode, onClick, onAddToCart }: ProductCardLi
       className="cursor-pointer bg-white border border-divider rounded-[14px] p-3 flex gap-3"
     >
       <div className="w-24 shrink-0">
-        <ProductImage size="sm" tag={p.tag} cat={p.cat} />
+        <ProductImage size="sm" tag={p.tag} swatch={p.swatch} />
       </div>
       <div className="flex-1 flex flex-col gap-1.5 min-w-0">
         <div className="text-[10.5px] text-muted font-mono tracking-[0.3px]">{p.sku}</div>

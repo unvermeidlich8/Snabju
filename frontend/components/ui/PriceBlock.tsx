@@ -15,12 +15,12 @@ export function PriceBlock({ p, mode, size = 'md' }: PriceBlockProps) {
       <div className="flex flex-col gap-0.5">
         <div className="flex items-baseline gap-1.5">
           <span className={`font-bold text-ink ${big ? 'text-2xl' : 'text-lg'}`} style={{ letterSpacing: '-0.4px' }}>
-            {fmtPlain(p.pricePallet)}
+            {fmtPlain(p.priceBox ?? p.price)}
           </span>
-          <span className={`text-muted ${big ? 'text-sm' : 'text-xs'}`}>₽ / паллета</span>
+          <span className={`text-muted ${big ? 'text-sm' : 'text-xs'}`}>₽ / коробка</span>
         </div>
         <div className="text-[11px] font-mono text-muted">
-          {p.palletQty} {p.unit} · {fmtPlain(Math.round(p.pricePallet / p.palletQty))} ₽/{p.unit}
+          {p.boxQty} {p.unit} · {fmtPlain(Math.round((p.priceBox ?? p.price) / (p.boxQty || 1)))} ₽/{p.unit}
         </div>
       </div>
     );
