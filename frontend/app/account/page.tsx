@@ -8,7 +8,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { fmt } from '@/lib/format';
+import { fmt, formatPhone, toApiPhone } from '@/lib/format';
 import type { Order } from '@/lib/types';
 
 const inputCls =
@@ -30,9 +30,10 @@ function AuthForms({ onSuccess }: { onSuccess: () => void }) {
     if (!phone || !password) { setError('Заполните все поля'); return; }
     if (tab === 'register' && !email) { setError('Укажите email'); return; }
     setLoading(true);
+    const apiPhone = toApiPhone(phone);
     try {
-      if (tab === 'login') await login(phone, password);
-      else await register(phone, email, password);
+      if (tab === 'login') await login(apiPhone, password);
+      else await register(apiPhone, email, password);
       onSuccess();
     } catch (e: any) {
       setError(e.message ?? 'Ошибка авторизации');
@@ -60,7 +61,7 @@ function AuthForms({ onSuccess }: { onSuccess: () => void }) {
       <div className="flex flex-col gap-2.5">
         <div className="bg-white border border-divider rounded-[14px] p-3.5">
           <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mb-1.5">Телефон</div>
-          <input className={inputCls} placeholder="+7 900 000-00-00" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+          <input className={inputCls} placeholder="8 (900) 000-00-00" type="tel" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} />
         </div>
 
         {tab === 'register' && (

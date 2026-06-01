@@ -5,10 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -73,12 +73,34 @@ func (r *postgresCategoryRepo) Create(ctx context.Context, in domain.CreateCateg
 	}
 
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO categories (id, title, swatch, icon, image_url, sort_order, created_at)
-		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7)`,
-		c.ID, c.Title, c.Swatch, c.Icon, c.ImageURL, c.SortOrder, time.Now(),
+		`INSERT INTO categories (id, title, swatch, icon, image_url, sort_order)
+		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)`,
+		c.ID, c.Title, c.Swatch, c.Icon, c.ImageURL, c.SortOrder,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.CategoryRepo.Create: %w", err)
 	}
 	return &c, nil
+}
+
+func (r *postgresCategoryRepo) Update(ctx context.Context, id uuid.UUID, in domain.UpdateCategoryInput) (*domain.Category, error) {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE categories SET title=$1, swatch=$2, icon=$3, image_url=NULLIF($4,''), sort_order=$5 WHERE id=$6`,
+		in.Title, in.Swatch, in.Icon, in.ImageURL, in.SortOrder, id,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("postgres.CategoryRepo.Update: %w", err)
+	}
+	return r.GetByID(ctx, id)
+}
+
+func (r *postgresCategoryRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM categories WHERE id=$1`, id)
+	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23503" {
+			return domain.ErrHasProducts
+		}
+		return fmt.Errorf("postgres.CategoryRepo.Delete: %w", err)
+	}
+	return nil
 }

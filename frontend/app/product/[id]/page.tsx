@@ -77,7 +77,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       <div className="pb-28">
         {/* Hero image */}
         <div className="pt-14 relative">
-          <ProductImage size="lg" tag={p.tag} swatch={p.swatch} />
+          <ProductImage size="lg" tag={p.tag} swatch={p.swatch} imageUrl={p.imageUrl} />
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             {[0, 1, 2, 3].map(i => (
               <div key={i} className="h-1.5 rounded-sm" style={{ width: i === 0 ? 18 : 6, background: i === 0 ? '#1a1a1a' : 'rgba(0,0,0,0.2)' }} />

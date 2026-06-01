@@ -8,13 +8,13 @@ import (
 )
 
 type CartItem struct {
-	ID        uuid.UUID
-	SessionID string
-	UserID    *uuid.UUID
-	ProductID uuid.UUID
-	Qty       int
-	AsPallet  bool
-	CreatedAt time.Time
+	ID        uuid.UUID  `json:"id"`
+	SessionID string     `json:"session_id"`
+	UserID    *uuid.UUID `json:"user_id,omitempty"`
+	ProductID uuid.UUID  `json:"product_id"`
+	Qty       int        `json:"qty"`
+	AsPallet  bool       `json:"as_pallet"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 type CartRepository interface {

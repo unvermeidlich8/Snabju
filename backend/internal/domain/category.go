@@ -23,14 +23,26 @@ type CreateCategoryInput struct {
 	SortOrder int
 }
 
+type UpdateCategoryInput struct {
+	Title     string
+	Swatch    string
+	Icon      string
+	ImageURL  string
+	SortOrder int
+}
+
 type CategoryRepository interface {
 	List(ctx context.Context) ([]Category, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Category, error)
 	Create(ctx context.Context, in CreateCategoryInput) (*Category, error)
+	Update(ctx context.Context, id uuid.UUID, in UpdateCategoryInput) (*Category, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 type CategoryService interface {
 	List(ctx context.Context) ([]Category, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Category, error)
 	Create(ctx context.Context, in CreateCategoryInput) (*Category, error)
+	Update(ctx context.Context, id uuid.UUID, in UpdateCategoryInput) (*Category, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }

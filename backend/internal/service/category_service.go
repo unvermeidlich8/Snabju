@@ -42,3 +42,21 @@ func (s *categoryService) Create(ctx context.Context, in domain.CreateCategoryIn
 	}
 	return cat, nil
 }
+
+func (s *categoryService) Update(ctx context.Context, id uuid.UUID, in domain.UpdateCategoryInput) (*domain.Category, error) {
+	if in.Title == "" {
+		return nil, domain.ErrValidation{Field: "title", Msg: "required"}
+	}
+	cat, err := s.categoryRepo.Update(ctx, id, in)
+	if err != nil {
+		return nil, fmt.Errorf("categoryService.Update: %w", err)
+	}
+	return cat, nil
+}
+
+func (s *categoryService) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := s.categoryRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("categoryService.Delete: %w", err)
+	}
+	return nil
+}

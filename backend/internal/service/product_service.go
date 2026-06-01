@@ -63,6 +63,27 @@ func (s *productService) Create(ctx context.Context, in domain.CreateProductInpu
 	return product, nil
 }
 
+func (s *productService) Update(ctx context.Context, id uuid.UUID, in domain.UpdateProductInput) (*domain.Product, error) {
+	if in.Title == "" {
+		return nil, domain.ErrValidation{Field: "title", Msg: "required"}
+	}
+	if in.Price <= 0 {
+		return nil, domain.ErrValidation{Field: "price", Msg: "must be positive"}
+	}
+	p, err := s.productRepo.Update(ctx, id, in)
+	if err != nil {
+		return nil, fmt.Errorf("productService.Update: %w", err)
+	}
+	return p, nil
+}
+
+func (s *productService) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := s.productRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("productService.Delete: %w", err)
+	}
+	return nil
+}
+
 func (s *productService) ListBrands(ctx context.Context) ([]string, error) {
 	brands, err := s.productRepo.ListBrands(ctx)
 	if err != nil {

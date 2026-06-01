@@ -4,6 +4,7 @@ import (
 	"Snabju/backend/internal/domain"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 )
 
@@ -26,9 +27,12 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 	case errors.Is(err, domain.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not found")
-	case errors.Is(err, domain.ErrPhoneExists), errors.Is(err, domain.ErrEmailExists), errors.Is(err, domain.ErrAlreadyExists):
+	case errors.Is(err, domain.ErrPhoneExists), errors.Is(err, domain.ErrEmailExists),
+		errors.Is(err, domain.ErrAlreadyExists), errors.Is(err, domain.ErrSKUExists),
+		errors.Is(err, domain.ErrHasProducts):
 		writeError(w, http.StatusConflict, err.Error())
 	default:
+		slog.Error("unhandled service error", "err", err)
 		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
 }

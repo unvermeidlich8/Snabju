@@ -8,6 +8,11 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
+type Sender interface {
+	SendRegistrationEmail(ctx context.Context, p domain.UserRegisteredPayload) error
+	SendOrderConfirmationEmail(ctx context.Context, p domain.OrderConfirmedPayload) error
+}
+
 type TLSPolicy string
 
 const (

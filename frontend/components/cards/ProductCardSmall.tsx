@@ -17,7 +17,7 @@ export function ProductCardSmall({ p, mode, onClick, onAddToCart }: ProductCardS
       onClick={onClick}
       className="cursor-pointer bg-white border border-divider rounded-[14px] p-2.5 flex flex-col gap-2"
     >
-      <ProductImage size="md" tag={p.tag} swatch={p.swatch} />
+      <ProductImage size="md" tag={p.tag} swatch={p.swatch} imageUrl={p.imageUrl} />
       <div className="text-[11px] text-muted font-mono">{p.catLabel}</div>
       <div className="text-[13px] font-semibold text-ink leading-tight line-clamp-2">{p.title}</div>
       <PriceBlock p={p} mode={mode} size="sm" />

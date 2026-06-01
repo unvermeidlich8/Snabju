@@ -101,11 +101,12 @@ export const api = {
     return cats;
   },
 
-  async getProducts(params: { category_id?: string; limit?: number; offset?: number } = {}): Promise<{ items: Product[]; total: number }> {
+  async getProducts(params: { category_id?: string; limit?: number; offset?: number; sort?: string } = {}): Promise<{ items: Product[]; total: number }> {
     const q = new URLSearchParams();
     if (params.category_id) q.set('category_id', params.category_id);
     if (params.limit != null) q.set('limit', String(params.limit));
     if (params.offset != null) q.set('offset', String(params.offset));
+    if (params.sort) q.set('sort', params.sort);
     const data = await req<{ items: Record<string, any>[]; total: number }>(`/api/v1/products?${q}`);
     return { items: (data.items ?? []).map(mapProduct), total: data.total ?? 0 };
   },
@@ -194,6 +195,56 @@ export const api = {
       method: 'POST', body: JSON.stringify(data),
     });
     return mapCategory(r);
+  },
+
+  async adminListOrders(params: { limit?: number; offset?: number } = {}): Promise<{ items: Order[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.limit != null) q.set('limit', String(params.limit));
+    if (params.offset != null) q.set('offset', String(params.offset));
+    const data = await req<{ items: Record<string, any>[]; total: number }>(`/api/v1/admin/orders?${q}`);
+    return { items: (data.items ?? []).map(mapOrder), total: data.total ?? 0 };
+  },
+
+  async adminUpdateOrderStatus(id: string, statusKind: string, status: string): Promise<Order> {
+    const r = await req<Record<string, any>>(`/api/v1/admin/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status_kind: statusKind, status }),
+    });
+    return mapOrder(r);
+  },
+
+  async adminUpdateCategory(id: string, data: {
+    title: string; swatch?: string; icon?: string;
+    image_url?: string; sort_order?: number;
+  }): Promise<Category> {
+    const r = await req<Record<string, any>>(`/api/v1/admin/categories/${id}`, {
+      method: 'PATCH', body: JSON.stringify(data),
+    });
+    return mapCategory(r);
+  },
+
+  async adminDeleteCategory(id: string): Promise<void> {
+    await req<void>(`/api/v1/admin/categories/${id}`, { method: 'DELETE' });
+  },
+
+  async adminUpdateProduct(id: string, data: {
+    title: string; sub?: string;
+    category_id?: string;
+    unit: string;
+    price: number;
+    price_box?: number | null; box_qty?: number;
+    stock?: number; stock_unit?: string;
+    tag?: string; image_url?: string;
+    specs?: { key: string; value: string }[];
+  }): Promise<Product> {
+    const r = await req<Record<string, any>>(`/api/v1/admin/products/${id}`, {
+      method: 'PATCH', body: JSON.stringify(data),
+    });
+    return mapProduct(r);
+  },
+
+  async adminDeleteProduct(id: string): Promise<void> {
+    await req<void>(`/api/v1/admin/products/${id}`, { method: 'DELETE' });
   },
 
   async adminCreateProduct(data: {

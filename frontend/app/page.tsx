@@ -32,7 +32,7 @@ export default function HomePage() {
       {/* Top bar */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <BrandMark size={22} />
-        <ModeChip mode={mode} />
+        <ModeChip />
       </div>
 
       {/* Address row */}

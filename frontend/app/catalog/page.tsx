@@ -12,6 +12,14 @@ import type { Category, Product } from '@/lib/types';
 
 const LIMIT = 20;
 
+type SortKey = 'popular' | 'price_asc' | 'price_desc' | 'new';
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'popular',    label: 'по популярности' },
+  { key: 'price_asc',  label: 'цена ↑' },
+  { key: 'price_desc', label: 'цена ↓' },
+  { key: 'new',        label: 'новые' },
+];
+
 export default function CatalogPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,6 +30,8 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [activeCat, setActiveCat] = useState(searchParams.get('category') ?? '');
+  const [sort, setSort] = useState<SortKey>('popular');
+  const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,10 +43,10 @@ export default function CatalogPage() {
     }).catch(() => {});
   }, []);
 
-  const fetchProducts = useCallback(async (catId: string) => {
+  const fetchProducts = useCallback(async (catId: string, s: SortKey) => {
     setLoading(true);
     try {
-      const res = await api.getProducts({ category_id: catId || undefined, limit: LIMIT });
+      const res = await api.getProducts({ category_id: catId || undefined, limit: LIMIT, sort: s });
       setProducts(res.items);
       setTotal(res.total);
     } catch {
@@ -47,10 +57,11 @@ export default function CatalogPage() {
   }, []);
 
   useEffect(() => {
-    if (activeCat || categories.length === 0) fetchProducts(activeCat);
-  }, [activeCat, fetchProducts]);
+    if (activeCat || categories.length === 0) fetchProducts(activeCat, sort);
+  }, [activeCat, sort, fetchProducts]);
 
   const activeCatTitle = categories.find(c => c.id === activeCat)?.title ?? 'Все товары';
+  const activeSortLabel = SORT_OPTIONS.find(o => o.key === sort)?.label ?? 'по популярности';
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -70,7 +81,7 @@ export default function CatalogPage() {
             {activeCatTitle}
           </div>
         </div>
-        <ModeChip mode={mode} />
+        <ModeChip />
       </div>
 
       {/* Category chips */}
@@ -117,14 +128,50 @@ export default function CatalogPage() {
       </div>
 
       {/* Sort */}
-      <div className="px-4 py-3 flex items-center justify-between">
+      <div className="px-4 py-3 flex items-center justify-between relative">
         <span className="text-xs text-muted">Сортировка</span>
-        <span className="text-[13px] font-semibold text-ink flex items-center gap-1">
-          по популярности
-          <svg width="10" height="10" viewBox="0 0 10 10">
+        <button
+          onClick={() => setSortOpen(o => !o)}
+          className="text-[13px] font-semibold text-ink flex items-center gap-1 cursor-pointer"
+        >
+          {activeSortLabel}
+          <svg
+            width="10" height="10" viewBox="0 0 10 10"
+            style={{ transform: sortOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }}
+          >
             <path d="M2 4l3 3 3-3" stroke="#1a1a1a" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
           </svg>
-        </span>
+        </button>
+
+        {sortOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setSortOpen(false)} />
+            <div
+              className="absolute right-4 top-full z-30 bg-white border border-divider rounded-[14px] overflow-hidden shadow-lg"
+              style={{ minWidth: 180 }}
+            >
+              {SORT_OPTIONS.map((o, i) => (
+                <button
+                  key={o.key}
+                  onClick={() => { setSort(o.key); setSortOpen(false); }}
+                  className="w-full px-4 py-3 text-left text-[13px] font-medium flex items-center justify-between cursor-pointer"
+                  style={{
+                    borderTop: i > 0 ? '1px solid #e7e3da' : 'none',
+                    color: sort === o.key ? '#ff6a13' : '#1a1a1a',
+                    fontWeight: sort === o.key ? 700 : 500,
+                  }}
+                >
+                  {o.label}
+                  {sort === o.key && (
+                    <svg width="14" height="14" viewBox="0 0 14 14">
+                      <path d="M2 7l4 4 6-6" stroke="#ff6a13" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Product list */}

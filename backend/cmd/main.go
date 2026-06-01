@@ -69,7 +69,14 @@ func main() {
 	producer := appkafka.NewProducer(cfg.kafkaBrokers)
 	defer producer.Close()
 
-	m := mailer.New(cfg.smtpHost, cfg.smtpPort, cfg.smtpUser, cfg.smtpPass, cfg.smtpFrom, cfg.smtpTLS)
+	var m mailer.Sender
+	if cfg.unisenderAPIKey != "" {
+		m = mailer.NewUniSender(cfg.unisenderAPIKey, cfg.unisenderListID, cfg.unisenderFromName, cfg.smtpFrom)
+		slog.Info("email provider: UniSender")
+	} else {
+		m = mailer.New(cfg.smtpHost, cfg.smtpPort, cfg.smtpUser, cfg.smtpPass, cfg.smtpFrom, cfg.smtpTLS)
+		slog.Info("email provider: SMTP")
+	}
 
 	// --- Services ---
 	userSvc := service.NewUserService(userRepo, cartRepo, hasher, sessionStore, producer)
@@ -89,7 +96,7 @@ func main() {
 	cartHandler := handler.NewCartHandler(cartSvc)
 	orderHandler := handler.NewOrderHandler(orderSvc)
 	profileHandler := handler.NewProfileHandler(userSvc)
-	adminHandler := handler.NewAdminHandler(categorySvc, productSvc)
+	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc)
 	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
 
 	// --- Router ---
@@ -139,36 +146,42 @@ func main() {
 }
 
 type config struct {
-	serverPort     string
-	dbURL          string
-	redisAddr      string
-	sessionTTL     time.Duration
-	allowedOrigins []string
-	kafkaBrokers   []string
-	smtpHost       string
-	smtpPort       int
-	smtpUser       string
-	smtpPass       string
-	smtpFrom       string
-	smtpTLS        mailer.TLSPolicy
-	uploadsDir     string
-	publicBaseURL  string
+	serverPort        string
+	dbURL             string
+	redisAddr         string
+	sessionTTL        time.Duration
+	allowedOrigins    []string
+	kafkaBrokers      []string
+	smtpHost          string
+	smtpPort          int
+	smtpUser          string
+	smtpPass          string
+	smtpFrom          string
+	smtpTLS           mailer.TLSPolicy
+	unisenderAPIKey   string
+	unisenderListID   string
+	unisenderFromName string
+	uploadsDir        string
+	publicBaseURL     string
 }
 
 func loadConfig() config {
 	cfg := config{
-		serverPort:     getEnv("SERVER_PORT", "8080"),
-		dbURL:          requireEnv("DB_URL"),
-		redisAddr:      getEnv("REDIS_URL", "localhost:6379"),
-		allowedOrigins: strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
-		kafkaBrokers:   strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
-		smtpHost:       getEnv("SMTP_HOST", "localhost"),
-		smtpUser:       getEnv("SMTP_USER", ""),
-		smtpPass:       getEnv("SMTP_PASS", ""),
-		smtpFrom:       getEnv("SMTP_FROM", "noreply@snabju.ru"),
-		smtpTLS:        mailer.ParseTLSPolicy(getEnv("SMTP_TLS", "none")),
-		uploadsDir:     getEnv("UPLOADS_DIR", "./uploads"),
-		publicBaseURL:  getEnv("PUBLIC_BASE_URL", "http://localhost:8080"),
+		serverPort:        getEnv("SERVER_PORT", "8080"),
+		dbURL:             requireEnv("DB_URL"),
+		redisAddr:         getEnv("REDIS_URL", "localhost:6379"),
+		allowedOrigins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		kafkaBrokers:      strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
+		smtpHost:          getEnv("SMTP_HOST", "localhost"),
+		smtpUser:          getEnv("SMTP_USER", ""),
+		smtpPass:          getEnv("SMTP_PASS", ""),
+		smtpFrom:          getEnv("SMTP_FROM", "noreply@snabju.ru"),
+		smtpTLS:           mailer.ParseTLSPolicy(getEnv("SMTP_TLS", "none")),
+		unisenderAPIKey:   getEnv("UNISENDER_API_KEY", ""),
+		unisenderListID:   getEnv("UNISENDER_LIST_ID", ""),
+		unisenderFromName: getEnv("UNISENDER_FROM_NAME", "Snabju"),
+		uploadsDir:        getEnv("UPLOADS_DIR", "./uploads"),
+		publicBaseURL:     getEnv("PUBLIC_BASE_URL", "http://localhost:8080"),
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")

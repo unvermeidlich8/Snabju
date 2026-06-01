@@ -7,8 +7,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const nav = [
-  { href: '/admin/categories', label: 'Категории' },
-  { href: '/admin/products/new', label: 'Добавить товар' },
+  { href: '/admin/orders',       label: 'Заказы' },
+  { href: '/admin/products',     label: 'Товары' },
+  { href: '/admin/products/new', label: 'Добавить' },
+  { href: '/admin/categories',   label: 'Категории' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -37,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               key={n.href}
               href={n.href}
               className="text-[13px] no-underline"
-              style={{ color: pathname === n.href ? '#ff6a13' : 'rgba(255,255,255,0.7)' }}
+              style={{ color: pathname === n.href || (n.href !== '/admin/products' && pathname.startsWith(n.href)) ? '#ff6a13' : 'rgba(255,255,255,0.7)' }}
             >
               {n.label}
             </Link>

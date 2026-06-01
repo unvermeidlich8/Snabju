@@ -56,7 +56,7 @@ export interface EnrichedCartItem extends CartItem {
 export interface Order {
   id: string;
   status: string;
-  statusKind: 'pending' | 'progress' | 'done';
+  statusKind: 'pending' | 'progress' | 'done' | 'cancelled';
   itemsCount: number;
   total: number;
   eta: string | null;

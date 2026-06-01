@@ -3,11 +3,13 @@ package postgres
 import (
 	"Snabju/backend/internal/domain"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,9 +21,19 @@ func NewPostgresProductRepo(pool *pgxpool.Pool) domain.ProductRepository {
 	return &postgresProductRepo{pool: pool}
 }
 
-const productCols = `id, sku, title, sub, category_id, cat_label, unit, unit_detail,
-	price, old_price, price_box, box_qty, stock, stock_unit, eta,
-	rating, reviews, tag, COALESCE(image_url, '') AS image_url, created_at, updated_at`
+const productCols = `id, sku, title,
+	COALESCE(sub, '')        AS sub,
+	category_id,
+	COALESCE(cat_label, '')  AS cat_label,
+	COALESCE(unit, '')       AS unit,
+	COALESCE(unit_detail,'') AS unit_detail,
+	price, old_price, price_box, box_qty, stock,
+	COALESCE(stock_unit, '') AS stock_unit,
+	COALESCE(eta, '')        AS eta,
+	rating, reviews,
+	COALESCE(tag, '')        AS tag,
+	COALESCE(image_url, '')  AS image_url,
+	created_at, updated_at`
 
 func scanProduct(rows pgx.Rows) (domain.Product, error) {
 	var p domain.Product
@@ -56,12 +68,25 @@ func (r *postgresProductRepo) loadSpecs(ctx context.Context, ids []uuid.UUID) (m
 	return result, rows.Err()
 }
 
+func sortClause(s string) string {
+	switch s {
+	case "price_asc":
+		return "ORDER BY price ASC, created_at DESC"
+	case "price_desc":
+		return "ORDER BY price DESC, created_at DESC"
+	case "new":
+		return "ORDER BY created_at DESC"
+	default: // popular
+		return "ORDER BY reviews DESC, rating DESC, created_at DESC"
+	}
+}
+
 func (r *postgresProductRepo) ListPaged(ctx context.Context, f domain.ProductFilter) (domain.ProductPage, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+productCols+`, COUNT(*) OVER() AS total
 		FROM products
 		WHERE ($1::uuid IS NULL OR category_id = $1)
-		ORDER BY created_at DESC
+		`+sortClause(f.Sort)+`
 		LIMIT $2 OFFSET $3`,
 		f.CategoryID, f.Limit, f.Offset,
 	)
@@ -192,6 +217,10 @@ func (r *postgresProductRepo) Create(ctx context.Context, in domain.CreateProduc
 		p.Rating, 0, p.Tag, p.ImageURL, p.CreatedAt, p.UpdatedAt,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, domain.ErrSKUExists
+		}
 		return nil, fmt.Errorf("postgres.ProductRepo.Create: %w", err)
 	}
 
@@ -221,6 +250,59 @@ func (r *postgresProductRepo) Create(ctx context.Context, in domain.CreateProduc
 	}
 
 	return &p, nil
+}
+
+func (r *postgresProductRepo) Update(ctx context.Context, id uuid.UUID, in domain.UpdateProductInput) (*domain.Product, error) {
+	now := time.Now()
+
+	var catLabel string
+	if in.CategoryID != nil {
+		_ = r.pool.QueryRow(ctx, `SELECT title FROM categories WHERE id = $1`, *in.CategoryID).Scan(&catLabel)
+	}
+
+	_, err := r.pool.Exec(ctx,
+		`UPDATE products SET
+			title=$2, sub=$3, category_id=$4, cat_label=$5, unit=$6,
+			price=$7, price_box=$8, box_qty=$9, stock=$10, stock_unit=$11,
+			tag=$12, image_url=NULLIF($13,''), updated_at=$14
+		WHERE id=$1`,
+		id, in.Title, in.Sub, in.CategoryID, catLabel, in.Unit,
+		in.Price, in.PriceBox, in.BoxQty, in.Stock, in.StockUnit,
+		in.Tag, in.ImageURL, now,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("postgres.ProductRepo.Update: %w", err)
+	}
+
+	if len(in.Specs) > 0 {
+		_, err = r.pool.Exec(ctx, `DELETE FROM product_specs WHERE product_id = $1`, id)
+		if err != nil {
+			return nil, fmt.Errorf("postgres.ProductRepo.Update delete specs: %w", err)
+		}
+		batch := &pgx.Batch{}
+		for i, s := range in.Specs {
+			batch.Queue(
+				`INSERT INTO product_specs (product_id, key, value, sort_order) VALUES ($1,$2,$3,$4)`,
+				id, s.Key, s.Value, i+1,
+			)
+		}
+		if err := r.pool.SendBatch(ctx, batch).Close(); err != nil {
+			return nil, fmt.Errorf("postgres.ProductRepo.Update specs: %w", err)
+		}
+	}
+
+	return r.GetByID(ctx, id)
+}
+
+func (r *postgresProductRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	result, err := r.pool.Exec(ctx, `DELETE FROM products WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("postgres.ProductRepo.Delete: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 func (r *postgresProductRepo) ListBrands(ctx context.Context) ([]string, error) {

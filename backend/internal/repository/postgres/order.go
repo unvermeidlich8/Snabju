@@ -102,6 +102,32 @@ func (r *postgresOrderRepo) ListBySessionID(ctx context.Context, sessionID strin
 	)
 }
 
+func (r *postgresOrderRepo) ListAll(ctx context.Context, limit, offset int) ([]domain.Order, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("postgres.OrderRepo.ListAll count: %w", err)
+	}
+
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+orderCols+` FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+		limit, offset,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("postgres.OrderRepo.ListAll: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []domain.Order
+	for rows.Next() {
+		o, err := r.scanOrder(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("postgres.OrderRepo.ListAll scan: %w", err)
+		}
+		orders = append(orders, o)
+	}
+	return orders, total, rows.Err()
+}
+
 func (r *postgresOrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, kind domain.OrderStatus, status string) error {
 	result, err := r.pool.Exec(ctx,
 		`UPDATE orders SET status = $1, status_kind = $2, updated_at = $3 WHERE id = $4`,

@@ -105,6 +105,14 @@ func (s *orderService) ListBySession(ctx context.Context, sessionID string) ([]d
 	return orders, nil
 }
 
+func (s *orderService) ListAll(ctx context.Context, limit, offset int) ([]domain.Order, int, error) {
+	orders, total, err := s.orderRepo.ListAll(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("orderService.ListAll: %w", err)
+	}
+	return orders, total, nil
+}
+
 func (s *orderService) UpdateStatus(ctx context.Context, id uuid.UUID, kind domain.OrderStatus, status string) error {
 	if err := s.orderRepo.UpdateStatus(ctx, id, kind, status); err != nil {
 		return fmt.Errorf("orderService.UpdateStatus: %w", err)

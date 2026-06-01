@@ -76,7 +76,7 @@ export default function CartPage() {
         {items.map(it => (
           <div key={it.id} className="bg-white border border-divider rounded-[14px] p-3 flex gap-3">
             <div className="w-[76px] shrink-0">
-              <ProductImage size="sm" swatch={it.product.swatch} />
+              <ProductImage size="sm" swatch={it.product.swatch} imageUrl={it.product.imageUrl} />
             </div>
             <div className="flex-1 flex flex-col gap-1 min-w-0">
               <div className="text-[10.5px] text-muted font-mono">{it.product.sku}</div>

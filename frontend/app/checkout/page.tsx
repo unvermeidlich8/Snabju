@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { useAuth } from '@/providers/AuthProvider';
-import { fmt } from '@/lib/format';
+import { fmt, formatPhone, toApiPhone } from '@/lib/format';
 
 type DeliveryType = 'truck' | 'pickup' | 'pallet';
 type PayType = 'invoice' | 'card' | 'split' | 'cash';
@@ -52,24 +52,18 @@ export default function CheckoutPage() {
   const { user } = useAuth();
 
   const [step, setStep] = useState(1);
-  const [delivery, setDelivery] = useState<DeliveryType>('truck');
+  const delivery: DeliveryType = 'pickup';
   const [pay, setPay] = useState<PayType>(mode === 'b2b' ? 'invoice' : 'card');
   const [address, setAddress] = useState('');
   const [name, setName] = useState(user?.name ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [phone, setPhone] = useState(formatPhone(user?.phone ?? ''));
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const subtotal = items.reduce((s, it) => s + (it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
-  const deliveryCost = delivery === 'truck' ? 1500 : delivery === 'pallet' ? 4800 : 0;
+  const deliveryCost = 0;
   const orderTotal = subtotal + deliveryCost;
-
-  const deliveryOptions: { id: DeliveryType; title: string; sub: string; cost: number; eta: string }[] = [
-    { id: 'truck',  title: 'Манипулятор',        sub: 'до подъезда · разгрузка',           cost: 1500, eta: 'завтра, 14:00–18:00' },
-    { id: 'pickup', title: 'Самовывоз',           sub: 'Котельники, МКАД 22 км',             cost: 0,    eta: 'через 2 часа' },
-    ...(mode === 'b2b' ? [{ id: 'pallet' as DeliveryType, title: 'Фура · паллетами', sub: 'самовыгрузка на объекте', cost: 4800, eta: 'завтра, до 12:00' }] : []),
-  ];
 
   const payOptions: { id: PayType; title: string; sub: string }[] = [
     ...(mode === 'b2b' ? [{ id: 'invoice' as PayType, title: 'Счёт на организацию', sub: 'оплата 14 дней, безнал' }] : []),
@@ -79,8 +73,8 @@ export default function CheckoutPage() {
   ];
 
   const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim() || !address.trim()) {
-      setError('Заполните имя, телефон и адрес доставки');
+    if (!name.trim() || !phone.trim()) {
+      setError('Заполните имя и телефон');
       return;
     }
     setError('');
@@ -88,8 +82,8 @@ export default function CheckoutPage() {
     try {
       await api.createOrder({
         contact_name: name.trim(),
-        contact_phone: phone.trim(),
-        address: address.trim(),
+        contact_phone: toApiPhone(phone),
+        address: address.trim() || 'Самовывоз — Котельники, МКАД 22 км',
       });
       router.push('/account?orderPlaced=1');
     } catch (e: any) {
@@ -141,28 +135,22 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Step 1: Delivery */}
+      {/* Step 1: Pickup info */}
       {step === 1 && (
         <div className="px-4 pt-5 flex flex-col gap-2.5">
-          <Field label="Адрес доставки">
-            <input
-              className={inputCls}
-              placeholder="Москва, улица, дом, квартира"
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-            />
-          </Field>
-          <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mt-2">Способ доставки</div>
-          {deliveryOptions.map(opt => (
-            <RadioOption
-              key={opt.id}
-              on={delivery === opt.id}
-              title={opt.title}
-              sub={`${opt.sub} · <span style="color:#3c3833">${opt.eta}</span>`}
-              right={opt.cost === 0 ? 'бесплатно' : fmt(opt.cost)}
-              onClick={() => setDelivery(opt.id)}
-            />
-          ))}
+          <div className="bg-white border border-divider rounded-[14px] p-3.5 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand grid place-items-center shrink-0">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 2a6 6 0 016 6c0 4-6 10-6 10S4 12 4 8a6 6 0 016-6z" stroke="#b48a00" strokeWidth="1.5"/>
+                <circle cx="10" cy="8" r="2" stroke="#b48a00" strokeWidth="1.5"/>
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-ink">Самовывоз</div>
+              <div className="text-xs text-muted mt-0.5">Котельники, МКАД 22 км · готово через 2 часа</div>
+            </div>
+            <div className="ml-auto text-[13px] font-bold font-mono" style={{ color: '#2d7a4a' }}>бесплатно</div>
+          </div>
         </div>
       )}
 
@@ -185,10 +173,10 @@ export default function CheckoutPage() {
           <Field label="Телефон">
             <input
               className={inputCls}
-              placeholder="+7 900 000-00-00"
+              placeholder="8 (900) 000-00-00"
               type="tel"
               value={phone}
-              onChange={e => setPhone(e.target.value)}
+              onChange={e => setPhone(formatPhone(e.target.value))}
             />
           </Field>
           <Field label="Комментарий" optional>

@@ -42,6 +42,7 @@ type ProductFilter struct {
 	CategoryID *uuid.UUID
 	Limit      int
 	Offset     int
+	Sort       string // popular | price_asc | price_desc | new
 }
 
 type ProductPage struct {
@@ -70,11 +71,28 @@ type CreateProductInput struct {
 	Specs      []ProductSpec
 }
 
+type UpdateProductInput struct {
+	Title      string
+	Sub        string
+	CategoryID *uuid.UUID
+	Unit       string
+	Price      float64
+	PriceBox   *float64
+	BoxQty     int
+	Stock      int
+	StockUnit  string
+	Tag        string
+	ImageURL   string
+	Specs      []ProductSpec
+}
+
 type ProductRepository interface {
 	ListPaged(ctx context.Context, f ProductFilter) (ProductPage, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Product, error)
 	GetBySKU(ctx context.Context, sku string) (*Product, error)
 	Create(ctx context.Context, in CreateProductInput) (*Product, error)
+	Update(ctx context.Context, id uuid.UUID, in UpdateProductInput) (*Product, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 	ListBrands(ctx context.Context) ([]string, error)
 }
 
@@ -83,5 +101,7 @@ type ProductService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Product, error)
 	GetBySKU(ctx context.Context, sku string) (*Product, error)
 	Create(ctx context.Context, in CreateProductInput) (*Product, error)
+	Update(ctx context.Context, id uuid.UUID, in UpdateProductInput) (*Product, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 	ListBrands(ctx context.Context) ([]string, error)
 }

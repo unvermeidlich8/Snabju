@@ -12,10 +12,10 @@ import (
 
 type NotificationConsumer struct {
 	reader *kafka.Reader
-	mailer *mailer.Mailer
+	mailer mailer.Sender
 }
 
-func NewNotificationConsumer(brokers []string, m *mailer.Mailer) *NotificationConsumer {
+func NewNotificationConsumer(brokers []string, m mailer.Sender) *NotificationConsumer {
 	return &NotificationConsumer{
 		reader: kafka.NewReader(kafka.ReaderConfig{
 			Brokers: brokers,
