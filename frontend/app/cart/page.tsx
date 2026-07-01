@@ -27,9 +27,8 @@ export default function CartPage() {
     (s, it) => s + (it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty,
     0
   );
-  const deliveryCost = subtotal > 25000 ? 0 : 1500;
   const b2bDiscount = mode === 'b2b' ? subtotal * 0.09 : 0;
-  const total = subtotal + deliveryCost - b2bDiscount;
+  const total = subtotal - b2bDiscount;
 
   if (loading) {
     return (
@@ -110,7 +109,6 @@ export default function CartPage() {
       <div className="px-4 pt-3.5">
         <div className="bg-white border border-divider rounded-[14px] p-3.5 flex flex-col gap-2">
           <Row label="Товары" value={fmt(subtotal)} />
-          <Row label="Доставка" value={deliveryCost === 0 ? 'бесплатно' : fmt(deliveryCost)} accent={deliveryCost === 0} />
           {mode === 'b2b' && <Row label="Скидка опт −9%" value={`−${fmt(b2bDiscount)}`} accent />}
           <div className="h-px bg-divider my-1" />
           <div className="flex justify-between items-baseline">

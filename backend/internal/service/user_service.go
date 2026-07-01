@@ -30,7 +30,7 @@ func NewUserService(userRepo domain.UserRepository, cartRepo domain.CartReposito
 	}
 }
 
-func (s *userService) Register(ctx context.Context, phone, email, password string) (*domain.User, string, error) {
+func (s *userService) Register(ctx context.Context, phone, email, name, password string) (*domain.User, string, error) {
 	phone = strings.TrimSpace(phone)
 	if len(phone) < 11 || (!strings.HasPrefix(phone, "+7") && !strings.HasPrefix(phone, "8")) {
 		return nil, "", domain.ErrValidation{Field: "phone", Msg: "must start with +7 or 8 and be at least 11 digits"}
@@ -51,6 +51,7 @@ func (s *userService) Register(ctx context.Context, phone, email, password strin
 	user := &domain.User{
 		Phone:        &phone,
 		Email:        &email,
+		Name:         strings.TrimSpace(name),
 		PasswordHash: hash,
 	}
 
@@ -74,6 +75,7 @@ func (s *userService) publishUserRegistered(ctx context.Context, user *domain.Us
 		UserID: user.ID.String(),
 		Phone:  *user.Phone,
 		Email:  user.Email,
+		Name:   user.Name,
 	})
 	if err != nil {
 		slog.Error("register: marshal event payload", "err", err)

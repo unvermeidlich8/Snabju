@@ -21,7 +21,9 @@ function AuthForms({ onSuccess }: { onSuccess: () => void }) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,11 +31,12 @@ function AuthForms({ onSuccess }: { onSuccess: () => void }) {
     setError('');
     if (!phone || !password) { setError('Заполните все поля'); return; }
     if (tab === 'register' && !email) { setError('Укажите email'); return; }
+    if (tab === 'register' && password !== confirmPassword) { setError('Пароли не совпадают'); return; }
     setLoading(true);
     const apiPhone = toApiPhone(phone);
     try {
       if (tab === 'login') await login(apiPhone, password);
-      else await register(apiPhone, email, password);
+      else await register(apiPhone, email, name, password);
       onSuccess();
     } catch (e: any) {
       setError(e.message ?? 'Ошибка авторизации');
@@ -65,16 +68,29 @@ function AuthForms({ onSuccess }: { onSuccess: () => void }) {
         </div>
 
         {tab === 'register' && (
-          <div className="bg-white border border-divider rounded-[14px] p-3.5">
-            <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mb-1.5">Email</div>
-            <input className={inputCls} placeholder="email@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-          </div>
+          <>
+            <div className="bg-white border border-divider rounded-[14px] p-3.5">
+              <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mb-1.5">Имя</div>
+              <input className={inputCls} placeholder="Иван Иванов" type="text" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+            <div className="bg-white border border-divider rounded-[14px] p-3.5">
+              <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mb-1.5">Email</div>
+              <input className={inputCls} placeholder="email@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+          </>
         )}
 
         <div className="bg-white border border-divider rounded-[14px] p-3.5">
           <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mb-1.5">Пароль</div>
           <input className={inputCls} placeholder={tab === 'register' ? 'Минимум 8 символов' : '••••••••'} type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
         </div>
+
+        {tab === 'register' && (
+          <div className="bg-white border border-divider rounded-[14px] p-3.5">
+            <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mb-1.5">Повторите пароль</div>
+            <input className={inputCls} placeholder="••••••••" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+        )}
 
         {error && (
           <div className="px-3.5 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>
@@ -101,6 +117,7 @@ function ProfileView() {
   const { user, logout } = useAuth();
   const { mode } = useMode();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [showOrders, setShowOrders] = useState(orderPlaced);
 
   useEffect(() => {
     api.getOrders().catch(() => []).then(list => {
@@ -129,15 +146,12 @@ function ProfileView() {
     : (user?.phone ?? '?').slice(-2);
 
   const stats = mode === 'b2b'
-    ? [[String(orders.length), 'Заказов'], ['8', 'В этом мес.'], ['300 K', 'Лимит']]
+    ? [[String(orders.length), 'Заказов']]
     : [[String(orders.length), 'Заказов'], ['0', 'Бонусов'], ['0', 'Любимых']];
 
   const menuItems: [string, string | null][] = [
-    ['Адреса доставки',  ''],
-    ['Способы оплаты',   mode === 'b2b' ? 'Безнал · договор' : ''],
-    ...(mode === 'b2b' ? [['Документы', 'Счета · акты · УПД'] as [string, string]] : []),
-    ['Поддержка',        'WhatsApp · Telegram'],
-    ['Выйти',            null],
+    ['Поддержка', 'WhatsApp · Telegram'],
+    ['Выйти',     null],
   ];
 
   return (
@@ -155,24 +169,47 @@ function ProfileView() {
             <div className="text-xs mt-0.5 font-mono" style={{ color: 'rgba(255,255,255,0.7)' }}>
               {user?.phone}
             </div>
+            {user?.email && (
+              <div className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                {user.email}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="px-4 pt-3.5 grid grid-cols-3 gap-2">
-        {stats.map(([v, k], i) => (
-          <div key={i} className="bg-white border border-divider rounded-xl p-3">
-            <div className="text-[18px] font-extrabold text-ink font-mono" style={{ letterSpacing: '-0.4px' }}>{v}</div>
-            <div className="text-[11px] text-muted mt-0.5">{k}</div>
-          </div>
-        ))}
+      <div className={`px-4 pt-3.5 grid gap-2 ${stats.length === 1 ? 'grid-cols-1' : stats.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {stats.map(([v, k], i) => {
+          const isOrders = k === 'Заказов';
+          return (
+            <div
+              key={i}
+              onClick={isOrders && orders.length > 0 ? () => setShowOrders(s => !s) : undefined}
+              className="bg-white border border-divider rounded-xl p-3"
+              style={{ cursor: isOrders && orders.length > 0 ? 'pointer' : 'default' }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-[18px] font-extrabold text-ink font-mono" style={{ letterSpacing: '-0.4px' }}>{v}</div>
+                {isOrders && orders.length > 0 && (
+                  <svg
+                    width="14" height="14" viewBox="0 0 14 14"
+                    style={{ transform: showOrders ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                  >
+                    <path d="M2 4l5 5 5-5" fill="none" stroke="#a8a39a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">{k}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Orders */}
-      {orders.length > 0 && (
+      {showOrders && orders.length > 0 && (
         <div className="mt-6">
-          <SectionHeader title="Заказы" />
+          <SectionHeader title="История заказов" />
           <div className="px-4 flex flex-col gap-2.5">
             {orders.map(o => {
               const dotColor = o.statusKind === 'progress' ? '#b48a00' : o.statusKind === 'done' ? '#2d7a4a' : '#a8a39a';

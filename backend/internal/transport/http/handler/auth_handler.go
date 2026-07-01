@@ -21,6 +21,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Phone    string `json:"phone"`
 		Email    string `json:"email"`
+		Name     string `json:"name"`
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -28,7 +29,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, sessionID, err := h.userService.Register(r.Context(), req.Phone, req.Email, req.Password)
+	user, sessionID, err := h.userService.Register(r.Context(), req.Phone, req.Email, req.Name, req.Password)
 	if err != nil {
 		handleServiceError(w, err)
 		return

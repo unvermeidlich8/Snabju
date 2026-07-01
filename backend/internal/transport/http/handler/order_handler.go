@@ -23,6 +23,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ContactName  string `json:"contact_name"`
 		ContactPhone string `json:"contact_phone"`
 		Address      string `json:"address"`
+		GuestEmail   string `json:"guest_email"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -38,6 +39,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ContactName:  req.ContactName,
 		ContactPhone: req.ContactPhone,
 		Address:      req.Address,
+		GuestEmail:   req.GuestEmail,
 	}
 
 	created, err := h.orderService.Create(r.Context(), order)

@@ -20,13 +20,13 @@ func NewPostgresOrderRepo(pool *pgxpool.Pool) domain.OrderRepository {
 }
 
 const orderCols = `id, user_id, session_id, status, status_kind, items_count, total, eta,
-	contact_name, contact_phone, address, created_at, updated_at`
+	contact_name, contact_phone, address, COALESCE(guest_email, ''), created_at, updated_at`
 
 func (r *postgresOrderRepo) scanOrder(rows pgx.Rows) (domain.Order, error) {
 	var o domain.Order
 	err := rows.Scan(
 		&o.ID, &o.UserID, &o.SessionID, &o.Status, &o.StatusKind, &o.ItemsCount, &o.Total, &o.ETA,
-		&o.ContactName, &o.ContactPhone, &o.Address, &o.CreatedAt, &o.UpdatedAt,
+		&o.ContactName, &o.ContactPhone, &o.Address, &o.GuestEmail, &o.CreatedAt, &o.UpdatedAt,
 	)
 	return o, err
 }
@@ -38,10 +38,10 @@ func (r *postgresOrderRepo) Create(ctx context.Context, o *domain.Order) error {
 	o.UpdatedAt = now
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO orders(id, user_id, session_id, status, status_kind, items_count, total, eta,
-		contact_name, contact_phone, address, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		contact_name, contact_phone, address, guest_email, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		o.ID, o.UserID, o.SessionID, o.Status, o.StatusKind, o.ItemsCount, o.Total, o.ETA,
-		o.ContactName, o.ContactPhone, o.Address, o.CreatedAt, o.UpdatedAt,
+		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.CreatedAt, o.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("postgres.OrderRepo.Create: %w", err)

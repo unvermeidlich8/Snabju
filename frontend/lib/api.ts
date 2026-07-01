@@ -137,7 +137,7 @@ export const api = {
     await req<void>(`/api/v1/cart/items/${id}`, { method: 'DELETE' });
   },
 
-  async createOrder(data: { contact_name: string; contact_phone: string; address: string }): Promise<Order> {
+  async createOrder(data: { contact_name: string; contact_phone: string; address: string; guest_email?: string }): Promise<Order> {
     const r = await req<Record<string, any>>('/api/v1/orders', { method: 'POST', body: JSON.stringify(data) });
     return mapOrder(r);
   },
@@ -147,8 +147,8 @@ export const api = {
     return (data.items ?? []).map(mapOrder);
   },
 
-  async register(phone: string, email: string, password: string): Promise<void> {
-    await req<unknown>('/api/v1/auth/register', { method: 'POST', body: JSON.stringify({ phone, email, password }) });
+  async register(phone: string, email: string, name: string, password: string): Promise<void> {
+    await req<unknown>('/api/v1/auth/register', { method: 'POST', body: JSON.stringify({ phone, email, name, password }) });
   },
 
   async login(phone: string, password: string): Promise<void> {

@@ -28,6 +28,7 @@ type Order struct {
 	ContactName  string      `json:"contact_name"`
 	ContactPhone string      `json:"contact_phone"`
 	Address      string      `json:"address"`
+	GuestEmail   string      `json:"guest_email,omitempty"`
 	CreatedAt    time.Time   `json:"created_at"`
 	UpdatedAt    time.Time   `json:"updated_at"`
 }

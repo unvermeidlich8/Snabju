@@ -87,12 +87,16 @@ func (m *Mailer) SendRegistrationEmail(ctx context.Context, p domain.UserRegiste
 	if p.Email == nil {
 		return nil
 	}
+	greeting := "Здравствуйте"
+	if p.Name != "" {
+		greeting = "Здравствуйте, " + p.Name
+	}
 	body := fmt.Sprintf(`
 <h2>Добро пожаловать в Snabju!</h2>
-<p>Вы успешно зарегистрировались.</p>
+<p>%s! Вы успешно зарегистрировались.</p>
 <p>Ваш телефон: <strong>%s</strong></p>
 <p>Теперь вы можете оформлять заказы и отслеживать историю покупок.</p>
-`, p.Phone)
+`, greeting, p.Phone)
 	return m.send(ctx, *p.Email, "Добро пожаловать в Snabju", body)
 }
 

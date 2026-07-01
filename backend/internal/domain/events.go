@@ -21,6 +21,7 @@ type UserRegisteredPayload struct {
 	UserID string  `json:"user_id"`
 	Phone  string  `json:"phone"`
 	Email  *string `json:"email"`
+	Name   string  `json:"name"`
 }
 
 type OrderConfirmedPayload struct {

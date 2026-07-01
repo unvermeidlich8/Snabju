@@ -57,13 +57,12 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('');
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(formatPhone(user?.phone ?? ''));
+  const [guestEmail, setGuestEmail] = useState('');
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const subtotal = items.reduce((s, it) => s + (it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
-  const deliveryCost = 0;
-  const orderTotal = subtotal + deliveryCost;
+  const orderTotal = items.reduce((s, it) => s + (it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
 
   const payOptions: { id: PayType; title: string; sub: string }[] = [
     ...(mode === 'b2b' ? [{ id: 'invoice' as PayType, title: 'Счёт на организацию', sub: 'оплата 14 дней, безнал' }] : []),
@@ -77,6 +76,10 @@ export default function CheckoutPage() {
       setError('Заполните имя и телефон');
       return;
     }
+    if (!user && !guestEmail.trim()) {
+      setError('Укажите email для получения уведомления о заказе');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
@@ -84,6 +87,7 @@ export default function CheckoutPage() {
         contact_name: name.trim(),
         contact_phone: toApiPhone(phone),
         address: address.trim() || 'Самовывоз — Котельники, МКАД 22 км',
+        ...(!user && guestEmail.trim() ? { guest_email: guestEmail.trim() } : {}),
       });
       router.push('/account?orderPlaced=1');
     } catch (e: any) {
@@ -127,7 +131,7 @@ export default function CheckoutPage() {
           ))}
         </div>
         <div className="flex justify-between mt-2 text-[11px] text-muted">
-          {['Доставка', 'Контакты', 'Оплата'].map((label, i) => (
+          {['Получение', 'Контакты', 'Оплата'].map((label, i) => (
             <span key={label} style={{ color: step >= i + 1 ? '#1a1a1a' : undefined, fontWeight: step === i + 1 ? 700 : 500 }}>
               {label}
             </span>
@@ -149,7 +153,6 @@ export default function CheckoutPage() {
               <div className="text-sm font-semibold text-ink">Самовывоз</div>
               <div className="text-xs text-muted mt-0.5">Котельники, МКАД 22 км · готово через 2 часа</div>
             </div>
-            <div className="ml-auto text-[13px] font-bold font-mono" style={{ color: '#2d7a4a' }}>бесплатно</div>
           </div>
         </div>
       )}
@@ -179,6 +182,17 @@ export default function CheckoutPage() {
               onChange={e => setPhone(formatPhone(e.target.value))}
             />
           </Field>
+          {!user && (
+            <Field label="Email для уведомления">
+              <input
+                className={inputCls}
+                placeholder="email@example.com"
+                type="email"
+                value={guestEmail}
+                onChange={e => setGuestEmail(e.target.value)}
+              />
+            </Field>
+          )}
           <Field label="Комментарий" optional>
             <input
               className={inputCls}

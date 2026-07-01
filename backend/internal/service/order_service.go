@@ -59,6 +59,8 @@ func (s *orderService) publishOrderConfirmed(ctx context.Context, o *domain.Orde
 		if user, err := s.userRepo.GetByID(ctx, *o.UserID); err == nil {
 			email = user.Email
 		}
+	} else if o.GuestEmail != "" {
+		email = &o.GuestEmail
 	}
 
 	payload, err := json.Marshal(domain.OrderConfirmedPayload{

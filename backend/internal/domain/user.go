@@ -35,7 +35,7 @@ type UserRepository interface {
 }
 
 type UserService interface {
-	Register(ctx context.Context, phone, email, password string) (*User, string, error)
+	Register(ctx context.Context, phone, email, name, password string) (*User, string, error)
 	Login(ctx context.Context, phone, password string) (sessionID string, err error)
 	Logout(ctx context.Context, sessionID string) error
 	GetProfile(ctx context.Context, userID uuid.UUID) (*User, error)
