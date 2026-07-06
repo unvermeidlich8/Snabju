@@ -23,10 +23,12 @@ export default function CartPage() {
   const { mode } = useMode();
   const { items, loading, updateQty, removeFromCart } = useCart();
 
-  const subtotal = items.reduce(
-    (s, it) => s + (it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty,
-    0
-  );
+  const itemPrice = (it: typeof items[0]) =>
+    it.markdownPrice != null
+      ? it.markdownPrice
+      : it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price;
+
+  const subtotal = items.reduce((s, it) => s + itemPrice(it) * it.qty, 0);
   const b2bDiscount = mode === 'b2b' ? subtotal * 0.09 : 0;
   const total = subtotal - b2bDiscount;
 
@@ -50,7 +52,7 @@ export default function CartPage() {
         </div>
         <h2 className="text-[22px] font-bold text-ink m-0" style={{ letterSpacing: '-0.4px' }}>Корзина пуста</h2>
         <p className="mt-1.5 mb-4 text-sm text-muted">
-          Загляните в каталог — там утеплители, пены и герметики со склада в Котельниках.
+          Загляните в каталог — там пены, герметики и многое другое.
         </p>
         <Btn kind="primary" onClick={() => router.push('/catalog')}>В каталог</Btn>
       </div>
@@ -73,18 +75,28 @@ export default function CartPage() {
       {/* Items */}
       <div className="px-4 pt-3 flex flex-col gap-2.5">
         {items.map(it => (
-          <div key={it.id} className="bg-white border border-divider rounded-[14px] p-3 flex gap-3">
+          <div key={it.id} className="bg-white border rounded-[14px] p-3 flex gap-3" style={{ borderColor: it.markdownPrice != null ? '#fed7aa' : '#e8e3d8' }}>
             <div className="w-[76px] shrink-0">
               <ProductImage size="sm" swatch={it.product.swatch} imageUrl={it.product.imageUrl} />
             </div>
             <div className="flex-1 flex flex-col gap-1 min-w-0">
-              <div className="text-[10.5px] text-muted font-mono">{it.product.sku}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10.5px] text-muted font-mono">{it.product.sku}</span>
+                {it.markdownPrice != null && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#fff3e0', color: '#e65100' }}>Уценка</span>
+                )}
+              </div>
               <div className="text-[13px] font-semibold text-ink leading-tight">{it.product.title}</div>
               <div className="text-[11px] text-muted">{it.product.eta}</div>
               <div className="flex items-center justify-between mt-1">
                 <QtyStepper value={it.qty} onChange={v => updateQty(it.id, v)} />
-                <div className="text-sm font-bold text-ink font-mono">
-                  {fmt((it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty)}
+                <div className="text-right">
+                  <div className="text-sm font-bold text-ink font-mono">
+                    {fmt(itemPrice(it) * it.qty)}
+                  </div>
+                  {it.markdownPrice != null && (
+                    <div className="text-[10px] text-muted line-through">{fmt(it.product.price * it.qty)}</div>
+                  )}
                 </div>
               </div>
             </div>

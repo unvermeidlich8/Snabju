@@ -9,6 +9,7 @@ interface CartContextValue {
   items: EnrichedCartItem[];
   loading: boolean;
   addToCart: (productId: string, qty: number, asPallet?: boolean) => Promise<void>;
+  addMarkdownToCart: (markdownItemId: string, qty: number) => Promise<void>;
   updateQty: (cartItemId: string, qty: number) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   refresh: () => Promise<void>;
@@ -48,6 +49,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     await refresh();
   }, [refresh]);
 
+  const addMarkdownToCart = useCallback(async (markdownItemId: string, qty: number) => {
+    await api.addMarkdownCartItem(markdownItemId, qty);
+    await refresh();
+  }, [refresh]);
+
   const updateQty = useCallback(async (cartItemId: string, qty: number) => {
     if (qty < 1) return;
     await api.updateCartItem(cartItemId, qty);
@@ -61,7 +67,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <CartContext.Provider value={{ items, loading, addToCart, updateQty, removeFromCart, refresh }}>
+    <CartContext.Provider value={{ items, loading, addToCart, addMarkdownToCart, updateQty, removeFromCart, refresh }}>
       {children}
     </CartContext.Provider>
   );

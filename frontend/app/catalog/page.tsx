@@ -30,6 +30,7 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [activeCat, setActiveCat] = useState(searchParams.get('category') ?? '');
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [sort, setSort] = useState<SortKey>('popular');
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -43,10 +44,10 @@ export default function CatalogPage() {
     }).catch(() => {});
   }, []);
 
-  const fetchProducts = useCallback(async (catId: string, s: SortKey) => {
+  const fetchProducts = useCallback(async (catId: string, s: SortKey, q: string) => {
     setLoading(true);
     try {
-      const res = await api.getProducts({ category_id: catId || undefined, limit: LIMIT, sort: s });
+      const res = await api.getProducts({ category_id: q ? undefined : (catId || undefined), q: q || undefined, limit: LIMIT, sort: s });
       setProducts(res.items);
       setTotal(res.total);
     } catch {
@@ -57,8 +58,8 @@ export default function CatalogPage() {
   }, []);
 
   useEffect(() => {
-    if (activeCat || categories.length === 0) fetchProducts(activeCat, sort);
-  }, [activeCat, sort, fetchProducts]);
+    if (search || activeCat || categories.length === 0) fetchProducts(activeCat, sort, search);
+  }, [activeCat, sort, search, fetchProducts]);
 
   const activeCatTitle = categories.find(c => c.id === activeCat)?.title ?? 'Все товары';
   const activeSortLabel = SORT_OPTIONS.find(o => o.key === sort)?.label ?? 'по популярности';
@@ -82,6 +83,28 @@ export default function CatalogPage() {
           </div>
         </div>
         <ModeChip />
+      </div>
+
+      {/* Search */}
+      <div className="px-4 pb-3">
+        <form
+          onSubmit={e => e.preventDefault()}
+          className="flex items-center gap-2.5 bg-white border border-divider rounded-[14px] px-3.5 py-2.5"
+        >
+          <svg width="16" height="16" viewBox="0 0 18 18" className="shrink-0">
+            <circle cx="8" cy="8" r="5.5" fill="none" stroke="#7a756d" strokeWidth="1.6"/>
+            <path d="M12 12l4 4" stroke="#7a756d" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Артикул, материал, бренд…"
+            className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch('')} className="text-muted text-lg leading-none cursor-pointer">×</button>
+          )}
+        </form>
       </div>
 
       {/* Category chips */}

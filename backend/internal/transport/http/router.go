@@ -20,6 +20,7 @@ func NewRouter(
 	profile *handler.ProfileHandler,
 	admin *handler.AdminHandler,
 	upload *handler.UploadHandler,
+	markdown *handler.MarkdownHandler,
 	sessionStore domain.SessionStore,
 	userRepo domain.UserRepository,
 	uploadsDir string,
@@ -49,6 +50,8 @@ func NewRouter(
 		r.Get("/products", catalog.ListProducts)
 		r.Get("/products/{id}", catalog.GetProduct)
 
+		r.Get("/markdown", markdown.List)
+
 		r.Get("/cart", cart.GetCart)
 		r.Post("/cart/items", cart.AddItem)
 		r.Patch("/cart/items/{id}", cart.UpdateItem)
@@ -64,6 +67,8 @@ func NewRouter(
 		r.Group(func(r chi.Router) {
 			r.Use(appmiddleware.AdminOnly(userRepo))
 			r.Post("/admin/upload", upload.Upload)
+			r.Post("/admin/markdown", markdown.Create)
+			r.Delete("/admin/markdown/{id}", markdown.Delete)
 			r.Post("/admin/categories", admin.CreateCategory)
 			r.Patch("/admin/categories/{id}", admin.UpdateCategory)
 			r.Delete("/admin/categories/{id}", admin.DeleteCategory)

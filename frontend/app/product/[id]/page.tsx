@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMode } from '@/providers/ModeProvider';
@@ -14,7 +14,8 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { fmt } from '@/lib/format';
 import type { Mode, Product } from '@/lib/types';
 
-export default function ProductPage({ params }: { params: { id: string } }) {
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { mode } = useMode();
   const { addToCart } = useCart();
@@ -26,15 +27,15 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const [asPallet, setAsPallet] = useState(false);
 
   useEffect(() => {
-    api.getProduct(params.id).then(p => {
+    api.getProduct(id).then(p => {
       setProduct(p);
       setQty(mode === 'b2b' ? (p.boxQty || 1) : 1);
       setAsPallet(mode === 'b2b');
       return api.getProducts({ category_id: p.categoryId, limit: 6 });
     }).then(res => {
-      setSimilar(res.items.filter(x => x.id !== params.id).slice(0, 4));
+      setSimilar(res.items.filter(x => x.id !== id).slice(0, 4));
     }).catch(() => {});
-  }, [params.id, mode]);
+  }, [id, mode]);
 
   if (!product) {
     return (

@@ -1,4 +1,4 @@
-import type { Category, Product, ProductSpec, CartItem, Order, User, CatIcon, ProductTag } from './types';
+import type { Category, Product, ProductSpec, CartItem, Order, User, CatIcon, ProductTag, MarkdownItem } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -60,7 +60,25 @@ function mapProduct(r: Record<string, any>): Product {
 }
 
 function mapCartItem(r: Record<string, any>): CartItem {
-  return { id: r.id, productId: r.product_id, qty: r.qty, asPallet: r.as_pallet ?? false };
+  return {
+    id: r.id,
+    productId: r.product_id,
+    qty: r.qty,
+    asPallet: r.as_pallet ?? false,
+    markdownItemId: r.markdown_item_id ?? undefined,
+    markdownPrice: r.markdown_price != null ? Number(r.markdown_price) : undefined,
+  };
+}
+
+function mapMarkdownItem(r: Record<string, any>): MarkdownItem {
+  return {
+    id: r.id,
+    productId: r.product_id,
+    qty: r.qty,
+    price: Number(r.price),
+    reason: r.reason ?? '',
+    createdAt: r.created_at ?? '',
+  };
 }
 
 function mapOrder(r: Record<string, any>): Order {
@@ -101,9 +119,10 @@ export const api = {
     return cats;
   },
 
-  async getProducts(params: { category_id?: string; limit?: number; offset?: number; sort?: string } = {}): Promise<{ items: Product[]; total: number }> {
+  async getProducts(params: { category_id?: string; q?: string; limit?: number; offset?: number; sort?: string } = {}): Promise<{ items: Product[]; total: number }> {
     const q = new URLSearchParams();
     if (params.category_id) q.set('category_id', params.category_id);
+    if (params.q) q.set('q', params.q);
     if (params.limit != null) q.set('limit', String(params.limit));
     if (params.offset != null) q.set('offset', String(params.offset));
     if (params.sort) q.set('sort', params.sort);
@@ -127,6 +146,31 @@ export const api = {
       body: JSON.stringify({ product_id: productId, qty, as_pallet: asPallet }),
     });
     return mapCartItem(r);
+  },
+
+  async addMarkdownCartItem(markdownItemId: string, qty: number): Promise<CartItem> {
+    const r = await req<Record<string, any>>('/api/v1/cart/items', {
+      method: 'POST',
+      body: JSON.stringify({ markdown_item_id: markdownItemId, qty }),
+    });
+    return mapCartItem(r);
+  },
+
+  async getMarkdownItems(): Promise<MarkdownItem[]> {
+    const data = await req<{ items: Record<string, any>[] }>('/api/v1/markdown');
+    return (data.items ?? []).map(mapMarkdownItem);
+  },
+
+  async adminCreateMarkdown(data: { product_id: string; qty: number; price: number; reason?: string }): Promise<MarkdownItem> {
+    const r = await req<Record<string, any>>('/api/v1/admin/markdown', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapMarkdownItem(r);
+  },
+
+  async adminDeleteMarkdown(id: string): Promise<void> {
+    await req<void>(`/api/v1/admin/markdown/${id}`, { method: 'DELETE' });
   },
 
   async updateCartItem(id: string, qty: number): Promise<void> {

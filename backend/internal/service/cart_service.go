@@ -9,24 +9,37 @@ import (
 )
 
 type cartService struct {
-	cartRepo domain.CartRepository
+	cartRepo     domain.CartRepository
+	markdownRepo domain.MarkdownRepository
 }
 
-func NewCartService(cartRepo domain.CartRepository) domain.CartService {
-	return &cartService{cartRepo: cartRepo}
+func NewCartService(cartRepo domain.CartRepository, markdownRepo domain.MarkdownRepository) domain.CartService {
+	return &cartService{cartRepo: cartRepo, markdownRepo: markdownRepo}
 }
 
-func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uuid.UUID, productID uuid.UUID, qty int, asPallet bool) (*domain.CartItem, error) {
+func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uuid.UUID, productID uuid.UUID, qty int, asPallet bool, markdownItemID *uuid.UUID) (*domain.CartItem, error) {
 	if qty <= 0 {
 		return nil, domain.ErrValidation{Field: "qty", Msg: "must be greater than zero"}
 	}
 
 	item := &domain.CartItem{
-		SessionID: sessionID,
-		UserID:    userID,
-		ProductID: productID,
-		Qty:       qty,
-		AsPallet:  asPallet,
+		SessionID:      sessionID,
+		UserID:         userID,
+		ProductID:      productID,
+		Qty:            qty,
+		AsPallet:       asPallet,
+		MarkdownItemID: markdownItemID,
+	}
+
+	if markdownItemID != nil {
+		m, err := s.markdownRepo.GetByID(ctx, *markdownItemID)
+		if err != nil {
+			return nil, domain.ErrNotFound
+		}
+		if m.Qty < qty {
+			return nil, domain.ErrValidation{Field: "qty", Msg: "exceeds available markdown qty"}
+		}
+		item.ProductID = m.ProductID
 	}
 
 	if err := s.cartRepo.Add(ctx, item); err != nil {

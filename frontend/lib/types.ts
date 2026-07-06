@@ -1,7 +1,7 @@
 export type Mode = 'b2c' | 'b2b';
 
 export type ProductTag = 'Хит' | 'Акция' | 'Новинка' | null;
-export type ProductUnit = 'уп' | 'рул' | 'шт' | 'лист';
+export type ProductUnit = 'шт' | 'кор';
 export type CatIcon = 'wool' | 'xps' | 'can' | 'tube' | 'roll' | 'block' | 'sheet' | 'tool';
 
 export interface Category {
@@ -47,6 +47,17 @@ export interface CartItem {
   productId: string;
   qty: number;
   asPallet: boolean;
+  markdownItemId?: string;
+  markdownPrice?: number;
+}
+
+export interface MarkdownItem {
+  id: string;
+  productId: string;
+  qty: number;
+  price: number;
+  reason: string;
+  createdAt: string;
 }
 
 export interface EnrichedCartItem extends CartItem {

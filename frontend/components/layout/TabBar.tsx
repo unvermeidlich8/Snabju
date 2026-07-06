@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation';
 import { useCart } from '@/providers/CartProvider';
 
 const tabs = [
-  { id: 'home',    href: '/',        label: 'Главная', icon: 'home' },
-  { id: 'catalog', href: '/catalog', label: 'Каталог', icon: 'cat' },
-  { id: 'cart',    href: '/cart',    label: 'Корзина', icon: 'cart' },
-  { id: 'account', href: '/account', label: 'Профиль', icon: 'user' },
+  { id: 'home',     href: '/',          label: 'Главная', icon: 'home' },
+  { id: 'catalog',  href: '/catalog',   label: 'Каталог', icon: 'cat' },
+  { id: 'markdown', href: '/markdown',  label: 'Уценка',  icon: 'tag' },
+  { id: 'cart',     href: '/cart',      label: 'Корзина', icon: 'cart' },
+  { id: 'account',  href: '/account',   label: 'Профиль', icon: 'user' },
 ];
 
 function TabIcon({ k, on }: { k: string; on: boolean }) {
@@ -17,6 +18,7 @@ function TabIcon({ k, on }: { k: string; on: boolean }) {
   if (k === 'home') return <svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 10l8-7 8 7v9a1 1 0 01-1 1h-4v-7H8v7H4a1 1 0 01-1-1z" {...sw}/></svg>;
   if (k === 'cat')  return <svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="3" width="7" height="7" rx="1.2" {...sw}/><rect x="12" y="3" width="7" height="7" rx="1.2" {...sw}/><rect x="3" y="12" width="7" height="7" rx="1.2" {...sw}/><rect x="12" y="12" width="7" height="7" rx="1.2" {...sw}/></svg>;
   if (k === 'cart') return <svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 4h2l2 11h11l2-8H6" {...sw}/><circle cx="9" cy="19" r="1.5" {...sw}/><circle cx="17" cy="19" r="1.5" {...sw}/></svg>;
+  if (k === 'tag')  return <svg width="22" height="22" viewBox="0 0 22 22"><path d="M4 4h6l8 8a2 2 0 010 2.83l-3.17 3.17a2 2 0 01-2.83 0L4 10V4z" {...sw}/><circle cx="8" cy="8" r="1.2" fill={c} stroke="none"/></svg>;
   return <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="8" r="4" {...sw}/><path d="M3 20c1.5-4 5-6 8-6s6.5 2 8 6" {...sw}/></svg>;
 }
 

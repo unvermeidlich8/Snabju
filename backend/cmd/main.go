@@ -62,6 +62,7 @@ func main() {
 	productRepo := postgres.NewPostgresProductRepo(pool)
 	cartRepo := postgres.NewPostgresCartRepo(pool)
 	orderRepo := postgres.NewPostgresOrderRepo(pool)
+	markdownRepo := postgres.NewPostgresMarkdownRepo(pool)
 
 	// --- Infrastructure ---
 	hasher := crypto.BcryptHasher{}
@@ -82,8 +83,9 @@ func main() {
 	userSvc := service.NewUserService(userRepo, cartRepo, hasher, sessionStore, producer)
 	categorySvc := service.NewCategoryService(categoryRepo)
 	productSvc := service.NewProductService(productRepo)
-	cartSvc := service.NewCartService(cartRepo)
+	cartSvc := service.NewCartService(cartRepo, markdownRepo)
 	orderSvc := service.NewOrderService(orderRepo, userRepo, producer)
+	markdownSvc := service.NewMarkdownService(markdownRepo)
 
 	// --- Kafka consumers ---
 	notificationConsumer := appkafka.NewNotificationConsumer(cfg.kafkaBrokers, m)
@@ -98,6 +100,7 @@ func main() {
 	profileHandler := handler.NewProfileHandler(userSvc)
 	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc)
 	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
+	markdownHandler := handler.NewMarkdownHandler(markdownSvc)
 
 	// --- Router ---
 	router := server.NewRouter(
@@ -108,6 +111,7 @@ func main() {
 		profileHandler,
 		adminHandler,
 		uploadHandler,
+		markdownHandler,
 		sessionStore,
 		userRepo,
 		cfg.uploadsDir,

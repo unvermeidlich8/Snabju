@@ -23,6 +23,11 @@ export default function AdminProductsPage() {
   const [sort, setSort] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
+  // multi-select
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
   // inline stock edit
   const [editingStock, setEditingStock] = useState<string | null>(null);
   const [stockVal, setStockVal] = useState('');
@@ -45,6 +50,9 @@ export default function AdminProductsPage() {
 
   useEffect(() => { load(); }, []);
 
+  // Clear selection when filter changes
+  useEffect(() => { setSelected(new Set()); }, [query, sort, sortDir]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     let list = q
@@ -60,6 +68,30 @@ export default function AdminProductsPage() {
     });
     return list;
   }, [products, query, sort, sortDir]);
+
+  const filteredIds = useMemo(() => new Set(filtered.map(p => p.id)), [filtered]);
+  const allSelected = filtered.length > 0 && filtered.every(p => selected.has(p.id));
+  const someSelected = selected.size > 0;
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        filteredIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelected(prev => new Set([...prev, ...filteredIds]));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   const toggleSort = (key: SortKey) => {
     if (sort === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -103,8 +135,19 @@ export default function AdminProductsPage() {
     try {
       await api.adminDeleteProduct(id);
       setProducts(prev => prev.filter(x => x.id !== id));
+      setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
     } catch {}
     setDeletingId(null);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = [...selected];
+    await Promise.allSettled(ids.map(id => api.adminDeleteProduct(id)));
+    setProducts(prev => prev.filter(x => !selected.has(x.id)));
+    setSelected(new Set());
+    setBulkDeleting(false);
+    setConfirmBulkDelete(false);
   };
 
   const SortBtn = ({ k }: { k: SortKey }) => (
@@ -151,11 +194,45 @@ export default function AdminProductsPage() {
         )}
       </div>
 
-      {/* Sort bar */}
+      {/* Sort bar + select all */}
       <div className="flex items-center gap-4 px-1">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+            onChange={toggleAll}
+            className="w-4 h-4 accent-orange-500 cursor-pointer"
+          />
+          <span className="text-[11px] text-muted">Все</span>
+        </label>
         <span className="text-[11px] text-muted">Сортировка:</span>
         {SORT_OPTIONS.map(o => <SortBtn key={o.key} k={o.key} />)}
       </div>
+
+      {/* Bulk action bar */}
+      {someSelected && (
+        <div className="flex items-center justify-between bg-ink text-white px-4 py-2.5 rounded-xl">
+          <span className="text-[13px] font-semibold">
+            Выбрано: {selected.size}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-[12px] cursor-pointer"
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+            >
+              Снять выделение
+            </button>
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer bg-red-500 text-white"
+            >
+              Удалить выбранные
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       {loading ? (
@@ -165,7 +242,19 @@ export default function AdminProductsPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map(p => (
-            <div key={p.id} className="bg-white border border-divider rounded-[14px] p-3 flex items-center gap-3">
+            <div
+              key={p.id}
+              className="bg-white border rounded-[14px] p-3 flex items-center gap-3 transition-colors"
+              style={{ borderColor: selected.has(p.id) ? '#ff6a13' : '#e8e3d8' }}
+            >
+              {/* Checkbox */}
+              <input
+                type="checkbox"
+                checked={selected.has(p.id)}
+                onChange={() => toggleOne(p.id)}
+                className="w-4 h-4 shrink-0 accent-orange-500 cursor-pointer"
+              />
+
               {/* Image */}
               <div className="relative shrink-0">
                 <div
@@ -258,7 +347,7 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* Delete confirm modal */}
+      {/* Single delete confirm modal */}
       {deletingId && (
         <>
           <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setDeletingId(null)} />
@@ -278,6 +367,34 @@ export default function AdminProductsPage() {
                 onClick={() => handleDelete(deletingId)}
                 className="flex-1 py-2.5 rounded-xl text-[14px] font-bold bg-red-500 text-white cursor-pointer"
               >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Bulk delete confirm modal */}
+      {confirmBulkDelete && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => !bulkDeleting && setConfirmBulkDelete(false)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-[20px] p-6 max-w-sm mx-auto shadow-xl">
+            <h3 className="text-lg font-bold text-ink m-0 mb-2">Удалить {selected.size} товар{selected.size === 1 ? '' : selected.size < 5 ? 'а' : 'ов'}?</h3>
+            <p className="text-sm text-muted mb-5">Это действие необратимо.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmBulkDelete(false)}
+                disabled={bulkDeleting}
+                className="flex-1 py-2.5 rounded-xl text-[14px] font-semibold border border-divider bg-white text-ink cursor-pointer disabled:opacity-50"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 py-2.5 rounded-xl text-[14px] font-bold bg-red-500 text-white cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {bulkDeleting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 Удалить
               </button>
             </div>

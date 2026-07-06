@@ -26,7 +26,10 @@ const TAGS: { value: ProductTag; label: string }[] = [
   { value: 'Новинка', label: 'Новинка' },
 ];
 
-const UNITS: ProductUnit[] = ['уп', 'рул', 'шт', 'лист'];
+const UNITS: { value: ProductUnit; label: string }[] = [
+  { value: 'шт', label: 'Штучно' },
+  { value: 'кор', label: 'Коробками' },
+];
 
 export default function AdminEditProductPage() {
   const router = useRouter();
@@ -37,7 +40,7 @@ export default function AdminEditProductPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [unit, setUnit] = useState<ProductUnit>('уп');
+  const [unit, setUnit] = useState<ProductUnit>('шт');
   const [price, setPrice] = useState('');
   const [priceBox, setPriceBox] = useState('');
   const [boxQty, setBoxQty] = useState('');
@@ -57,7 +60,7 @@ export default function AdminEditProductPage() {
       setTitle(p.title);
       setDescription(p.sub);
       setCategoryId(p.categoryId);
-      setUnit((p.unit as ProductUnit) || 'уп');
+      setUnit((p.unit as ProductUnit) || 'шт');
       setPrice(String(p.price));
       setPriceBox(p.priceBox ? String(p.priceBox) : '');
       setBoxQty(p.boxQty ? String(p.boxQty) : '');
@@ -147,10 +150,10 @@ export default function AdminEditProductPage() {
         <div className="text-[11px] text-muted font-mono uppercase tracking-[0.4px]">Единица продажи</div>
         <div className="flex gap-2">
           {UNITS.map(u => (
-            <button key={u} onClick={() => setUnit(u)}
+            <button key={u.value} onClick={() => setUnit(u.value)}
               className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold border cursor-pointer"
-              style={{ background: unit === u ? '#1a1a1a' : '#fff', color: unit === u ? '#fff' : '#3c3833', borderColor: unit === u ? '#1a1a1a' : '#e7e3da' }}
-            >{u}</button>
+              style={{ background: unit === u.value ? '#1a1a1a' : '#fff', color: unit === u.value ? '#fff' : '#3c3833', borderColor: unit === u.value ? '#1a1a1a' : '#e7e3da' }}
+            >{u.label}</button>
           ))}
         </div>
       </div>

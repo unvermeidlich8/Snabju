@@ -86,9 +86,10 @@ func (r *postgresProductRepo) ListPaged(ctx context.Context, f domain.ProductFil
 		`SELECT `+productCols+`, COUNT(*) OVER() AS total
 		FROM products
 		WHERE ($1::uuid IS NULL OR category_id = $1)
+		AND ($2 = '' OR title ILIKE '%' || $2 || '%' OR sku ILIKE '%' || $2 || '%')
 		`+sortClause(f.Sort)+`
-		LIMIT $2 OFFSET $3`,
-		f.CategoryID, f.Limit, f.Offset,
+		LIMIT $3 OFFSET $4`,
+		f.CategoryID, f.Search, f.Limit, f.Offset,
 	)
 	if err != nil {
 		return domain.ProductPage{}, fmt.Errorf("postgres.ProductRepo.ListPaged: %w", err)

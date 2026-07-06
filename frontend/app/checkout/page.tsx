@@ -86,7 +86,7 @@ export default function CheckoutPage() {
       await api.createOrder({
         contact_name: name.trim(),
         contact_phone: toApiPhone(phone),
-        address: address.trim() || 'Самовывоз — Котельники, МКАД 22 км',
+        address: address.trim() || 'Самовывоз — Москва, Новокуркинское шоссе 14',
         ...(!user && guestEmail.trim() ? { guest_email: guestEmail.trim() } : {}),
       });
       router.push('/account?orderPlaced=1');
@@ -151,7 +151,7 @@ export default function CheckoutPage() {
             </div>
             <div>
               <div className="text-sm font-semibold text-ink">Самовывоз</div>
-              <div className="text-xs text-muted mt-0.5">Котельники, МКАД 22 км · готово через 2 часа</div>
+              <div className="text-xs text-muted mt-0.5">Москва, Новокуркинское шоссе 14 · готово через 2 часа</div>
             </div>
           </div>
         </div>

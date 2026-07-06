@@ -26,7 +26,10 @@ const TAGS: { value: ProductTag; label: string }[] = [
   { value: 'Новинка', label: 'Новинка' },
 ];
 
-const UNITS: ProductUnit[] = ['уп', 'рул', 'шт', 'лист'];
+const UNITS: { value: ProductUnit; label: string }[] = [
+  { value: 'шт', label: 'Штучно' },
+  { value: 'кор', label: 'Коробками' },
+];
 
 function genSku(): string {
   return 'SKU-' + Date.now().toString(36).toUpperCase().slice(-6);
@@ -41,7 +44,7 @@ export default function AdminNewProductPage() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [brand, setBrand] = useState('');
-  const [unit, setUnit] = useState<ProductUnit>('уп');
+  const [unit, setUnit] = useState<ProductUnit>('шт');
   const [price, setPrice] = useState('');
   const [priceBox, setPriceBox] = useState('');
   const [boxQty, setBoxQty] = useState('');
@@ -147,16 +150,16 @@ export default function AdminNewProductPage() {
         <div className="flex gap-2">
           {UNITS.map(u => (
             <button
-              key={u}
-              onClick={() => setUnit(u)}
+              key={u.value}
+              onClick={() => setUnit(u.value)}
               className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold border cursor-pointer"
               style={{
-                background: unit === u ? '#1a1a1a' : '#fff',
-                color: unit === u ? '#fff' : '#3c3833',
-                borderColor: unit === u ? '#1a1a1a' : '#e7e3da',
+                background: unit === u.value ? '#1a1a1a' : '#fff',
+                color: unit === u.value ? '#fff' : '#3c3833',
+                borderColor: unit === u.value ? '#1a1a1a' : '#e7e3da',
               }}
             >
-              {u}
+              {u.label}
             </button>
           ))}
         </div>

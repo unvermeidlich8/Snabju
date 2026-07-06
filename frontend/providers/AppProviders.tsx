@@ -6,7 +6,7 @@ import { CartProvider } from './CartProvider';
 import { ModeProvider } from './ModeProvider';
 import { TabBar } from '@/components/layout/TabBar';
 
-const TAB_PATHS = ['/', '/catalog', '/cart', '/account'];
+const TAB_PATHS = ['/', '/catalog', '/markdown', '/cart', '/account'];
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

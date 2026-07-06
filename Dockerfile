@@ -1,10 +1,11 @@
-FROM golang:1.26-alpine
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
-
-RUN go install github.com/air-verse/air@latest
-
 COPY go.mod go.sum ./
 RUN go mod download
+COPY . .
+RUN go build -o /server ./backend/cmd/main.go
 
-# Source is mounted as volume — Air watches for changes and rebuilds
-CMD ["air", "-c", "backend/.air.toml"]
+FROM alpine:3.20
+WORKDIR /app
+COPY --from=builder /server /server
+CMD ["/server"]

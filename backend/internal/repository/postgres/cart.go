@@ -22,9 +22,9 @@ func (r *postgresCartRepo) Add(ctx context.Context, item *domain.CartItem) error
 	item.ID = uuid.New()
 	item.CreatedAt = time.Now()
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO cart_items(id, session_id, user_id, product_id, qty, as_pallet, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		item.ID, item.SessionID, item.UserID, item.ProductID, item.Qty, item.AsPallet, item.CreatedAt,
+		`INSERT INTO cart_items(id, session_id, user_id, product_id, qty, as_pallet, markdown_item_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		item.ID, item.SessionID, item.UserID, item.ProductID, item.Qty, item.AsPallet, item.MarkdownItemID, item.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("postgres.CartRepo.Add: %w", err)
@@ -64,7 +64,10 @@ func (r *postgresCartRepo) listBy(ctx context.Context, query string, arg any) ([
 	var items []domain.CartItem
 	for rows.Next() {
 		var item domain.CartItem
-		if err := rows.Scan(&item.ID, &item.SessionID, &item.UserID, &item.ProductID, &item.Qty, &item.AsPallet, &item.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&item.ID, &item.SessionID, &item.UserID, &item.ProductID,
+			&item.Qty, &item.AsPallet, &item.MarkdownItemID, &item.MarkdownPrice, &item.CreatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("postgres.CartRepo list scan: %w", err)
 		}
 		items = append(items, item)
@@ -74,14 +77,22 @@ func (r *postgresCartRepo) listBy(ctx context.Context, query string, arg any) ([
 
 func (r *postgresCartRepo) ListBySession(ctx context.Context, sessionID string) ([]domain.CartItem, error) {
 	return r.listBy(ctx,
-		`SELECT id, session_id, user_id, product_id, qty, as_pallet, created_at FROM cart_items WHERE session_id = $1 ORDER BY created_at`,
+		`SELECT c.id, c.session_id, c.user_id, c.product_id, c.qty, c.as_pallet,
+		        c.markdown_item_id, m.price, c.created_at
+		 FROM cart_items c
+		 LEFT JOIN markdown_items m ON m.id = c.markdown_item_id
+		 WHERE c.session_id = $1 ORDER BY c.created_at`,
 		sessionID,
 	)
 }
 
 func (r *postgresCartRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.CartItem, error) {
 	return r.listBy(ctx,
-		`SELECT id, session_id, user_id, product_id, qty, as_pallet, created_at FROM cart_items WHERE user_id = $1 ORDER BY created_at`,
+		`SELECT c.id, c.session_id, c.user_id, c.product_id, c.qty, c.as_pallet,
+		        c.markdown_item_id, m.price, c.created_at
+		 FROM cart_items c
+		 LEFT JOIN markdown_items m ON m.id = c.markdown_item_id
+		 WHERE c.user_id = $1 ORDER BY c.created_at`,
 		userID,
 	)
 }

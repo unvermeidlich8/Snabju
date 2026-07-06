@@ -40,6 +40,7 @@ type Product struct {
 
 type ProductFilter struct {
 	CategoryID *uuid.UUID
+	Search     string
 	Limit      int
 	Offset     int
 	Sort       string // popular | price_asc | price_desc | new

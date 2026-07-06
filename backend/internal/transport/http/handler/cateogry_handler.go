@@ -63,6 +63,9 @@ func (h *CatalogHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("sort"); v != "" {
 		f.Sort = v
 	}
+	if v := r.URL.Query().Get("q"); v != "" {
+		f.Search = v
+	}
 
 	page, err := h.productService.ListPaged(r.Context(), f)
 	if err != nil {

@@ -10,7 +10,6 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -78,8 +77,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - .:/app
-      - go_mod_cache:/go/pkg/mod
       - uploads_data:/app/uploads
     depends_on:
       db:
@@ -142,5 +139,4 @@ volumes:
   pgdata:
   prometheus_data:
   grafana_data:
-  go_mod_cache:
   uploads_data:

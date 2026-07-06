@@ -36,25 +36,43 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 
 func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ProductID string `json:"product_id"`
-		Qty       int    `json:"qty"`
-		AsPallet  bool   `json:"as_pallet"`
+		ProductID      *string `json:"product_id"`
+		Qty            int     `json:"qty"`
+		AsPallet       bool    `json:"as_pallet"`
+		MarkdownItemID *string `json:"markdown_item_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	productID, err := uuid.Parse(req.ProductID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid product_id")
-		return
+	var productID uuid.UUID
+	var markdownItemID *uuid.UUID
+
+	if req.MarkdownItemID != nil && *req.MarkdownItemID != "" {
+		id, err := uuid.Parse(*req.MarkdownItemID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid markdown_item_id")
+			return
+		}
+		markdownItemID = &id
+	} else {
+		if req.ProductID == nil || *req.ProductID == "" {
+			writeError(w, http.StatusBadRequest, "product_id or markdown_item_id required")
+			return
+		}
+		id, err := uuid.Parse(*req.ProductID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid product_id")
+			return
+		}
+		productID = id
 	}
 
 	sessionID := sessionIDFromRequest(r)
 	userID := userIDFromRequest(r)
 
-	item, err := h.cartService.AddItem(r.Context(), sessionID, userID, productID, req.Qty, req.AsPallet)
+	item, err := h.cartService.AddItem(r.Context(), sessionID, userID, productID, req.Qty, req.AsPallet, markdownItemID)
 	if err != nil {
 		handleServiceError(w, err)
 		return
