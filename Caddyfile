@@ -1,0 +1,7 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	@backend path /api/* /uploads/*
+	reverse_proxy @backend backend:8080
+	reverse_proxy frontend:3000
+}
