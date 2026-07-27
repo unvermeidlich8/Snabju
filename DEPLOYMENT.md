@@ -37,6 +37,8 @@ docker compose -f docker-compose.prod.yml exec -T db \
   psql -U snabju -d snabju -f /dev/stdin < db/seeds/004_products.sql
 docker compose -f docker-compose.prod.yml exec -T db \
   psql -U snabju -d snabju -f /dev/stdin < db/seeds/005_markdown_items.sql
+docker compose -f docker-compose.prod.yml exec -T db \
+  psql -U snabju -d snabju -f /dev/stdin < db/seeds/006_product_images.sql
 ```
 
 `004_products.sql` replaces the whole catalog, so run it only for the initial
