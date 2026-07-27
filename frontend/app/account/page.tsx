@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMode } from '@/providers/ModeProvider';
@@ -296,7 +296,9 @@ export default function AccountPage() {
       {loading ? (
         <div className="px-4 pt-8 text-center text-sm text-muted">Загрузка…</div>
       ) : user ? (
-        <ProfileView />
+        <Suspense fallback={<div className="px-4 pt-8 text-center text-sm text-muted">Загрузка…</div>}>
+          <ProfileView />
+        </Suspense>
       ) : (
         <>
           <div className="px-4 pt-6 pb-2">

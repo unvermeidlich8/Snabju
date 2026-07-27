@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMode } from '@/providers/ModeProvider';
@@ -20,7 +20,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'new',        label: 'новые' },
 ];
 
-export default function CatalogPage() {
+function CatalogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mode } = useMode();
@@ -275,5 +275,13 @@ export default function CatalogPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={<div className="px-4 py-8 text-center text-sm text-muted">Загружаем каталог…</div>}>
+      <CatalogContent />
+    </Suspense>
   );
 }
