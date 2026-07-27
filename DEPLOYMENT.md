@@ -27,6 +27,32 @@ docker compose -f docker-compose.prod.yml logs --tail=100 backend caddy
 The `migrate` container applies pending database migrations before the backend
 starts. It exits successfully afterwards.
 
+## Initial catalog data
+
+The catalog is intentionally not included in migrations. On a new production
+database, load it once after the stack starts:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T db \
+  psql -U snabju -d snabju -f /dev/stdin < db/seeds/004_products.sql
+docker compose -f docker-compose.prod.yml exec -T db \
+  psql -U snabju -d snabju -f /dev/stdin < db/seeds/005_markdown_items.sql
+```
+
+`004_products.sql` replaces the whole catalog, so run it only for the initial
+load or when intentionally replacing the catalog.
+
+## First administrator
+
+Register the account normally through the site, then grant it administrator
+rights directly in the production database (replace the email):
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T db \
+  psql -U snabju -d snabju -c \
+  "UPDATE users SET is_admin = TRUE WHERE email = 'admin@example.com';"
+```
+
 ## Updates
 
 ```bash
