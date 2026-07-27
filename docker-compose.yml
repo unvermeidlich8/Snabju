@@ -27,31 +27,6 @@ services:
       timeout: 5s
       retries: 5
 
-  kafka:
-    image: apache/kafka:3.7.0
-    restart: unless-stopped
-    ports:
-      - "9092:9092"   # external (host tools)
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      # PLAINTEXT — для внешних клиентов (localhost:9092)
-      # INTERNAL  — для контейнеров в docker-сети (kafka:29092)
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-
   mailhog:
     image: mailhog/mailhog
     restart: unless-stopped
@@ -69,7 +44,6 @@ services:
       # Override localhost addresses with Docker service names
       DB_URL: "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
       REDIS_URL: "redis:6379"
-      KAFKA_BROKERS: "kafka:29092"
       SMTP_HOST: "mailhog"
       SMTP_PORT: "1025"
       UPLOADS_DIR: "/app/uploads"
@@ -82,8 +56,6 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      kafka:
         condition: service_healthy
 
   frontend:

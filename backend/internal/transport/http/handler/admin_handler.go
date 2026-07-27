@@ -203,6 +203,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		StockUnit  string   `json:"stock_unit"`
 		Tag        string   `json:"tag"`
 		ImageURL   string   `json:"image_url"`
+		IsActive   *bool    `json:"is_active"`
 		Specs      []struct {
 			Key   string `json:"key"`
 			Value string `json:"value"`
@@ -213,6 +214,10 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isActive := true
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
 	in := domain.UpdateProductInput{
 		Title:     req.Title,
 		Sub:       req.Sub,
@@ -224,6 +229,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		StockUnit: req.StockUnit,
 		Tag:       req.Tag,
 		ImageURL:  req.ImageURL,
+		IsActive:  isActive,
 	}
 	if req.CategoryID != nil && *req.CategoryID != "" {
 		catID, err := uuid.Parse(*req.CategoryID)
@@ -262,6 +268,26 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GET /api/v1/admin/products
+func (h *AdminHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
+	f := domain.ProductFilter{
+		Limit:           200,
+		IncludeInactive: true,
+	}
+	if v := r.URL.Query().Get("q"); v != "" {
+		f.Search = v
+	}
+	page, err := h.productService.ListPaged(r.Context(), f)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	if page.Items == nil {
+		page.Items = []domain.Product{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": page.Items, "total": page.Total})
 }
 
 // GET /api/v1/admin/orders

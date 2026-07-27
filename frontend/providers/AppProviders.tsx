@@ -5,6 +5,7 @@ import { AuthProvider } from './AuthProvider';
 import { CartProvider } from './CartProvider';
 import { ModeProvider } from './ModeProvider';
 import { TabBar } from '@/components/layout/TabBar';
+import { ModeSelectModal } from '@/components/ui/ModeSelectModal';
 
 const TAB_PATHS = ['/', '/catalog', '/markdown', '/cart', '/account'];
 
@@ -21,6 +22,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               {children}
             </div>
             {showTabBar && <TabBar />}
+            <ModeSelectModal />
           </div>
         </CartProvider>
       </AuthProvider>

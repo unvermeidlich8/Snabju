@@ -33,17 +33,20 @@ type Product struct {
 	Reviews    int           `json:"reviews"`
 	Tag        string        `json:"tag"`
 	ImageURL   string        `json:"image_url"`
+	IsActive   bool          `json:"is_active"`
 	Specs      []ProductSpec `json:"specs"`
 	CreatedAt  time.Time     `json:"created_at"`
 	UpdatedAt  time.Time     `json:"updated_at"`
 }
 
 type ProductFilter struct {
-	CategoryID *uuid.UUID
-	Search     string
-	Limit      int
-	Offset     int
-	Sort       string // popular | price_asc | price_desc | new
+	CategoryID      *uuid.UUID
+	Search          string
+	Brands          []string
+	Limit           int
+	Offset          int
+	Sort            string // popular | price_asc | price_desc | new
+	IncludeInactive bool
 }
 
 type ProductPage struct {
@@ -84,6 +87,7 @@ type UpdateProductInput struct {
 	StockUnit  string
 	Tag        string
 	ImageURL   string
+	IsActive   bool
 	Specs      []ProductSpec
 }
 

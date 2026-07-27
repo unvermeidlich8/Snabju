@@ -22,9 +22,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
   const [product, setProduct] = useState<Product | null>(null);
   const [similar, setSimilar] = useState<Product[]>([]);
-  const [activeTab, setActiveTab] = useState<'about' | 'specs' | 'docs'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'specs'>('about');
   const [qty, setQty] = useState(1);
   const [asPallet, setAsPallet] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     api.getProduct(id).then(p => {
@@ -63,27 +64,13 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <path d="M9 2L3 7l6 5" fill="none" stroke="#1a1a1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <div className="flex gap-2">
-          {[
-            <svg key="heart" width="16" height="16" viewBox="0 0 16 16"><path d="M8 14l-1-.9C3.5 9.9 1 7.7 1 5a3.6 3.6 0 016.5-2.1A3.6 3.6 0 0115 5c0 2.7-2.5 4.9-6 8.1L8 14z" fill="none" stroke="#1a1a1a" strokeWidth="1.5"/></svg>,
-            <svg key="share" width="14" height="14" viewBox="0 0 14 14"><circle cx="11" cy="3" r="1.5" fill="#1a1a1a"/><circle cx="3" cy="7" r="1.5" fill="#1a1a1a"/><circle cx="11" cy="11" r="1.5" fill="#1a1a1a"/><path d="M4.3 6.3l5.4-2.6M4.3 7.7l5.4 2.6" stroke="#1a1a1a" strokeWidth="1.2"/></svg>,
-          ].map((icon, i) => (
-            <button key={i} className="w-9 h-9 rounded-xl grid place-items-center cursor-pointer" style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
-              {icon}
-            </button>
-          ))}
-        </div>
+        <div />
       </div>
 
       <div className="pb-28">
         {/* Hero image */}
         <div className="pt-14 relative">
           <ProductImage size="lg" tag={p.tag} swatch={p.swatch} imageUrl={p.imageUrl} />
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} className="h-1.5 rounded-sm" style={{ width: i === 0 ? 18 : 6, background: i === 0 ? '#1a1a1a' : 'rgba(0,0,0,0.2)' }} />
-            ))}
-          </div>
         </div>
 
         {/* Title block */}
@@ -92,9 +79,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <span className="text-[11px] text-muted font-mono">{p.sku}</span>
             <span className="text-[11px] text-faint">·</span>
             <span className="text-[11px] text-muted">{p.catLabel}</span>
-            <span className="ml-auto text-xs text-ink2 font-semibold">
-              ★ {p.rating} <span className="text-muted font-normal">({p.reviews})</span>
-            </span>
           </div>
           <h1 className="m-0 text-[22px] font-bold text-ink leading-tight" style={{ letterSpacing: '-0.5px' }}>{p.title}</h1>
           <p className="mt-1.5 mb-0 text-[13px] text-muted">{p.sub}</p>
@@ -123,9 +107,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           <div className="bg-white border border-divider rounded-[16px] p-4 flex flex-col gap-3">
             <div className="flex items-end justify-between">
               <PriceBlock p={p} mode={effectiveMode} size="lg" />
-              {mode === 'b2b' && (
-                <div className="px-2 py-1 rounded-[6px] bg-success-soft text-success text-[11px] font-bold font-mono">−9%</div>
-              )}
             </div>
             <div className="h-px bg-divider" />
             <div className="flex items-center gap-3">
@@ -143,7 +124,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         {/* Tabs */}
         <div className="px-4 pt-5">
           <div className="flex gap-1.5 border-b border-divider">
-            {([['about', 'Описание'], ['specs', 'Характеристики'], ['docs', 'Документы']] as const).map(([id, label]) => (
+            {([['about', 'Описание'], ['specs', 'Характеристики']] as const).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -181,20 +162,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           </div>
         )}
 
-        {activeTab === 'docs' && (
-          <div className="px-4 pt-3.5 flex flex-col gap-2">
-            {['Сертификат соответствия.pdf', 'Технический лист.pdf', 'Декларация ПБ.pdf'].map(f => (
-              <div key={f} className="flex items-center gap-3 bg-white border border-divider rounded-xl p-3">
-                <div className="w-9 h-9 rounded-lg bg-brand grid place-items-center font-mono text-[10px] font-bold text-accent-dk shrink-0">PDF</div>
-                <div className="flex-1 text-[13px] font-medium text-ink">{f}</div>
-                <svg width="14" height="14" viewBox="0 0 14 14">
-                  <path d="M7 1v9M3 7l4 4 4-4M2 13h10" stroke="#a8a39a" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Similar */}
         {similar.length > 0 && (
           <div className="pt-6">
@@ -225,11 +192,21 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           <div className="text-[18px] font-bold text-ink font-mono" style={{ letterSpacing: '-0.3px' }}>{fmt(total)}</div>
         </div>
         <button
-          onClick={() => { addToCart(p.id, qty, asPallet); router.push('/cart'); }}
+          onClick={async () => {
+            if (adding) return;
+            setAdding(true);
+            try {
+              await addToCart(p.id, qty, asPallet);
+              router.push('/cart');
+            } finally {
+              setAdding(false);
+            }
+          }}
+          disabled={adding}
           className="px-[22px] py-3.5 rounded-xl text-[15px] font-bold text-white cursor-pointer"
-          style={{ background: '#ff6a13' }}
+          style={{ background: '#ff6a13', opacity: adding ? 0.7 : 1 }}
         >
-          В корзину →
+          {adding ? 'Добавляем…' : 'В корзину →'}
         </button>
       </div>
     </div>

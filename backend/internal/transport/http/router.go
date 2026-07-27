@@ -47,6 +47,7 @@ func NewRouter(
 		r.Post("/auth/logout", auth.Logout)
 
 		r.Get("/categories", catalog.Categories)
+		r.Get("/brands", catalog.Brands)
 		r.Get("/products", catalog.ListProducts)
 		r.Get("/products/{id}", catalog.GetProduct)
 
@@ -73,6 +74,7 @@ func NewRouter(
 			r.Patch("/admin/categories/{id}", admin.UpdateCategory)
 			r.Delete("/admin/categories/{id}", admin.DeleteCategory)
 			r.Get("/admin/brands", admin.ListBrands)
+			r.Get("/admin/products", admin.ListProducts)
 			r.Post("/admin/products", admin.CreateProduct)
 			r.Patch("/admin/products/{id}", admin.UpdateProduct)
 			r.Delete("/admin/products/{id}", admin.DeleteProduct)

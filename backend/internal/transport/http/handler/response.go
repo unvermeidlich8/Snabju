@@ -22,17 +22,17 @@ func handleServiceError(w http.ResponseWriter, err error) {
 	var valErr domain.ErrValidation
 	switch {
 	case errors.As(err, &valErr):
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusBadRequest, valErr.Msg)
 	case errors.Is(err, domain.ErrInvalidCredentials):
-		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		writeError(w, http.StatusUnauthorized, "неверные учетные данные")
 	case errors.Is(err, domain.ErrNotFound):
-		writeError(w, http.StatusNotFound, "not found")
+		writeError(w, http.StatusNotFound, "не найдено")
 	case errors.Is(err, domain.ErrPhoneExists), errors.Is(err, domain.ErrEmailExists),
 		errors.Is(err, domain.ErrAlreadyExists), errors.Is(err, domain.ErrSKUExists),
 		errors.Is(err, domain.ErrHasProducts):
 		writeError(w, http.StatusConflict, err.Error())
 	default:
 		slog.Error("unhandled service error", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeError(w, http.StatusInternalServerError, "внутренняя ошибка сервера")
 	}
 }

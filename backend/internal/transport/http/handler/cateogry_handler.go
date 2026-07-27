@@ -36,6 +36,20 @@ func (h *CatalogHandler) Categories(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"items": categories})
 }
 
+func (h *CatalogHandler) Brands(w http.ResponseWriter, r *http.Request) {
+	brands, err := h.productService.ListBrands(r.Context())
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	if brands == nil {
+		brands = []string{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"items": brands})
+}
+
 func (h *CatalogHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	f := domain.ProductFilter{
 		Limit:  20,
@@ -65,6 +79,9 @@ func (h *CatalogHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	}
 	if v := r.URL.Query().Get("q"); v != "" {
 		f.Search = v
+	}
+	if brands := r.URL.Query()["brand"]; len(brands) > 0 {
+		f.Brands = brands
 	}
 
 	page, err := h.productService.ListPaged(r.Context(), f)

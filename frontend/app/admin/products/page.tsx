@@ -41,7 +41,7 @@ export default function AdminProductsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await api.getProducts({ limit: 200 });
+      const res = await api.adminListProducts();
       setProducts(res.items);
     } finally {
       setLoading(false);
@@ -129,6 +129,18 @@ export default function AdminProductsPage() {
       setProducts(prev => prev.map(x => x.id === productId ? updated : x));
     } catch {}
     setUploadingFor(null);
+  };
+
+  const toggleActive = async (p: Product) => {
+    try {
+      const updated = await api.adminUpdateProduct(p.id, {
+        title: p.title, sub: p.sub, category_id: p.categoryId || undefined,
+        unit: p.unit, price: p.price, price_box: p.priceBox, box_qty: p.boxQty,
+        stock: p.stock, stock_unit: p.stockUnit, tag: p.tag ?? undefined,
+        image_url: p.imageUrl, is_active: !p.isActive, specs: p.specs,
+      });
+      setProducts(prev => prev.map(x => x.id === p.id ? updated : x));
+    } catch {}
   };
 
   const handleDelete = async (id: string) => {
@@ -325,6 +337,24 @@ export default function AdminProductsPage() {
                     {p.stock} {p.stockUnit}
                   </button>
                 )}
+              </div>
+
+              {/* Active toggle */}
+              <div className="shrink-0 flex flex-col items-center gap-1">
+                <button
+                  onClick={() => toggleActive(p)}
+                  className="relative w-10 h-5 rounded-full transition-colors cursor-pointer"
+                  style={{ background: p.isActive ? '#22c55e' : '#d1d5db' }}
+                  title={p.isActive ? 'Скрыть товар' : 'Показать товар'}
+                >
+                  <div
+                    className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                    style={{ left: p.isActive ? '22px' : '2px' }}
+                  />
+                </button>
+                <div className="text-[9px] font-mono" style={{ color: p.isActive ? '#15803d' : '#9ca3af' }}>
+                  {p.isActive ? 'продаётся' : 'скрыт'}
+                </div>
               </div>
 
               {/* Actions */}

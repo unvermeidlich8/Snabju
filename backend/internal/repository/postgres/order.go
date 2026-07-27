@@ -33,7 +33,9 @@ func (r *postgresOrderRepo) scanOrder(rows pgx.Rows) (domain.Order, error) {
 
 func (r *postgresOrderRepo) Create(ctx context.Context, o *domain.Order) error {
 	now := time.Now()
-	o.ID = uuid.New()
+	if o.ID == uuid.Nil {
+		o.ID = uuid.New()
+	}
 	o.CreatedAt = now
 	o.UpdatedAt = now
 	_, err := r.pool.Exec(ctx,
@@ -47,6 +49,43 @@ func (r *postgresOrderRepo) Create(ctx context.Context, o *domain.Order) error {
 		return fmt.Errorf("postgres.OrderRepo.Create: %w", err)
 	}
 	return nil
+}
+
+func (r *postgresOrderRepo) CreateItems(ctx context.Context, items []domain.OrderItem) error {
+	for _, item := range items {
+		_, err := r.pool.Exec(ctx,
+			`INSERT INTO order_items(id, order_id, product_id, title, sku, unit, price, qty, total)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			item.ID, item.OrderID, item.ProductID, item.Title, item.SKU, item.Unit,
+			item.Price, item.Qty, item.Total,
+		)
+		if err != nil {
+			return fmt.Errorf("postgres.OrderRepo.CreateItems: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *postgresOrderRepo) GetItems(ctx context.Context, orderID uuid.UUID) ([]domain.OrderItem, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, order_id, product_id, title, sku, unit, price, qty, total
+		 FROM order_items WHERE order_id = $1 ORDER BY title`,
+		orderID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("postgres.OrderRepo.GetItems: %w", err)
+	}
+	defer rows.Close()
+
+	var items []domain.OrderItem
+	for rows.Next() {
+		var it domain.OrderItem
+		if err := rows.Scan(&it.ID, &it.OrderID, &it.ProductID, &it.Title, &it.SKU, &it.Unit, &it.Price, &it.Qty, &it.Total); err != nil {
+			return nil, fmt.Errorf("postgres.OrderRepo.GetItems scan: %w", err)
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
 }
 
 func (r *postgresOrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {
@@ -67,6 +106,13 @@ func (r *postgresOrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 	if err != nil {
 		return nil, fmt.Errorf("postgres.OrderRepo.GetByID scan: %w", err)
 	}
+	rows.Close()
+
+	items, err := r.GetItems(ctx, o.ID)
+	if err != nil {
+		return nil, err
+	}
+	o.Items = items
 	return &o, nil
 }
 

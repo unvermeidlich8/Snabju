@@ -11,6 +11,7 @@ export interface Category {
   icon: string;
   imageUrl: string;
   sortOrder: number;
+  productsCount: number;
 }
 
 export interface ProductSpec {
@@ -39,6 +40,7 @@ export interface Product {
   reviews: number;
   tag: ProductTag;
   imageUrl: string;
+  isActive: boolean;
   specs: ProductSpec[];
 }
 
@@ -64,6 +66,17 @@ export interface EnrichedCartItem extends CartItem {
   product: Product;
 }
 
+export interface OrderItem {
+  id: string;
+  productId: string;
+  title: string;
+  sku: string;
+  unit: string;
+  price: number;
+  qty: number;
+  total: number;
+}
+
 export interface Order {
   id: string;
   status: string;
@@ -74,6 +87,7 @@ export interface Order {
   contactName: string;
   contactPhone: string;
   address: string;
+  items: OrderItem[];
   createdAt: string;
 }
 

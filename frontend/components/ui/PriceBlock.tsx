@@ -9,36 +9,44 @@ interface PriceBlockProps {
 
 export function PriceBlock({ p, mode, size = 'md' }: PriceBlockProps) {
   const big = size === 'lg';
+  const isB2b = mode === 'b2b';
 
-  if (mode === 'b2b') {
-    return (
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-1.5">
-          <span className={`font-bold text-ink ${big ? 'text-2xl' : 'text-lg'}`} style={{ letterSpacing: '-0.4px' }}>
-            {fmtPlain(p.priceBox ?? p.price)}
-          </span>
-          <span className={`text-muted ${big ? 'text-sm' : 'text-xs'}`}>₽ / коробка</span>
-        </div>
-        <div className="text-[11px] font-mono text-muted">
-          {p.boxQty} {p.unit} · {fmtPlain(Math.round((p.priceBox ?? p.price) / (p.boxQty || 1)))} ₽/{p.unit}
-        </div>
-      </div>
-    );
-  }
+  const unitPrice = isB2b ? Math.round(p.price * 0.85) : p.price;
+  const boxBasePrice = p.priceBox ?? (p.boxQty ? p.price * p.boxQty : null);
+  const boxPrice = boxBasePrice != null && p.boxQty
+    ? (isB2b ? Math.round(boxBasePrice * 0.85) : boxBasePrice)
+    : null;
 
   return (
     <div className="flex flex-col gap-0.5">
+      {/* Unit price */}
       <div className="flex items-baseline gap-2">
         <span className={`font-bold text-ink ${big ? 'text-2xl' : 'text-lg'}`} style={{ letterSpacing: '-0.4px' }}>
-          {fmtPlain(p.price)} <span className="font-medium">₽</span>
+          {fmtPlain(unitPrice)} <span className="font-medium">₽</span>
         </span>
-        {p.oldPrice && (
+        {isB2b && (
+          <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold" style={{ background: '#dcfce7', color: '#15803d' }}>−15%</span>
+        )}
+        {!isB2b && p.oldPrice && (
           <span className={`text-faint line-through ${big ? 'text-sm' : 'text-[13px]'}`}>
             {fmtPlain(p.oldPrice)}
           </span>
         )}
       </div>
-      <div className="text-[11px] text-muted">{p.unitDetail}</div>
+
+      {/* Box price */}
+      {boxPrice != null ? (
+        <div className="text-[11px] text-muted">
+          {fmtPlain(boxPrice)} ₽ / коробка · {p.boxQty} {p.unit}
+        </div>
+      ) : (
+        <div className="text-[11px] text-muted">{p.unitDetail || `за ${p.unit}`}</div>
+      )}
+
+      {/* B2B: show crossed retail price */}
+      {isB2b && (
+        <div className="text-[11px] text-faint line-through">{fmtPlain(p.price)} ₽ розница</div>
+      )}
     </div>
   );
 }

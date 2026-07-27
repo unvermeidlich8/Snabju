@@ -48,6 +48,7 @@ export default function AdminEditProductPage() {
   const [stockUnit, setStockUnit] = useState('');
   const [tag, setTag] = useState<ProductTag>(null);
   const [imageUrl, setImageUrl] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([]);
 
   const [saving, setSaving] = useState(false);
@@ -68,6 +69,7 @@ export default function AdminEditProductPage() {
       setStockUnit(p.stockUnit);
       setTag(p.tag);
       setImageUrl(p.imageUrl);
+      setIsActive(p.isActive);
       setSpecs(p.specs.length > 0 ? p.specs : [{ key: '', value: '' }]);
     }).catch(() => router.replace('/admin/products'));
   }, [id]);
@@ -97,6 +99,7 @@ export default function AdminEditProductPage() {
         stock_unit: stockUnit.trim(),
         tag: tag ?? undefined,
         image_url: imageUrl,
+        is_active: isActive,
         specs: specs.filter(s => s.key.trim() && s.value.trim()),
       });
       router.push('/admin/products');
@@ -215,6 +218,32 @@ export default function AdminEditProductPage() {
           </div>
         ))}
       </div>
+
+      {/* Visibility toggle */}
+      <button
+        type="button"
+        onClick={() => setIsActive(v => !v)}
+        className="w-full flex items-center justify-between bg-white border rounded-xl px-4 py-3.5 cursor-pointer"
+        style={{ borderColor: isActive ? '#e7e3da' : '#fca5a5' }}
+      >
+        <div>
+          <div className="text-sm font-semibold text-ink text-left">
+            {isActive ? 'Товар виден покупателям' : 'Товар скрыт от покупателей'}
+          </div>
+          <div className="text-xs text-muted mt-0.5 text-left">
+            {isActive ? 'Отображается в каталоге и поиске' : 'Не отображается в каталоге'}
+          </div>
+        </div>
+        <div
+          className="w-12 h-6 rounded-full relative transition-colors shrink-0"
+          style={{ background: isActive ? '#22c55e' : '#d1d5db' }}
+        >
+          <div
+            className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all"
+            style={{ left: isActive ? '26px' : '2px' }}
+          />
+        </div>
+      </button>
 
       {error && <div className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
 

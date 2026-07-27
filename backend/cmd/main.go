@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"Snabju/backend/internal/crypto"
-	appkafka "Snabju/backend/internal/kafka"
 	"Snabju/backend/internal/mailer"
 	appredis "Snabju/backend/internal/redis"
+	"Snabju/backend/internal/redisstream"
 	"Snabju/backend/internal/repository/postgres"
 	"Snabju/backend/internal/service"
+	tgbot "Snabju/backend/internal/telegram"
 	server "Snabju/backend/internal/transport/http"
 	"Snabju/backend/internal/transport/http/handler"
 
@@ -67,8 +68,7 @@ func main() {
 	// --- Infrastructure ---
 	hasher := crypto.BcryptHasher{}
 	sessionStore := appredis.NewSessionStore(redisClient, cfg.sessionTTL)
-	producer := appkafka.NewProducer(cfg.kafkaBrokers)
-	defer producer.Close()
+	producer := redisstream.NewProducer(redisClient)
 
 	var m mailer.Sender
 	if cfg.unisenderAPIKey != "" {
@@ -83,14 +83,20 @@ func main() {
 	userSvc := service.NewUserService(userRepo, cartRepo, hasher, sessionStore, producer)
 	categorySvc := service.NewCategoryService(categoryRepo)
 	productSvc := service.NewProductService(productRepo)
-	cartSvc := service.NewCartService(cartRepo, markdownRepo)
-	orderSvc := service.NewOrderService(orderRepo, userRepo, producer)
+	cartSvc := service.NewCartService(cartRepo, productRepo, markdownRepo)
+	orderSvc := service.NewOrderService(orderRepo, userRepo, cartRepo, productRepo, producer)
 	markdownSvc := service.NewMarkdownService(markdownRepo)
 
-	// --- Kafka consumers ---
-	notificationConsumer := appkafka.NewNotificationConsumer(cfg.kafkaBrokers, m)
+	// --- Telegram bot (optional) ---
+	var tg tgbot.Notifier
+	if cfg.telegramToken != "" && cfg.telegramAdminChatID != "" {
+		tg = tgbot.New(cfg.telegramToken, cfg.telegramAdminChatID)
+		slog.Info("telegram notifications enabled")
+	}
+
+	// --- Redis Streams consumers ---
+	notificationConsumer := redisstream.NewNotificationConsumer(redisClient, m, tg)
 	go notificationConsumer.Run(context.Background())
-	defer notificationConsumer.Close()
 
 	// --- Handlers ---
 	authHandler := handler.NewAuthHandler(userSvc)
@@ -150,42 +156,44 @@ func main() {
 }
 
 type config struct {
-	serverPort        string
-	dbURL             string
-	redisAddr         string
-	sessionTTL        time.Duration
-	allowedOrigins    []string
-	kafkaBrokers      []string
-	smtpHost          string
-	smtpPort          int
-	smtpUser          string
-	smtpPass          string
-	smtpFrom          string
-	smtpTLS           mailer.TLSPolicy
-	unisenderAPIKey   string
-	unisenderListID   string
-	unisenderFromName string
-	uploadsDir        string
-	publicBaseURL     string
+	serverPort          string
+	dbURL               string
+	redisAddr           string
+	sessionTTL          time.Duration
+	allowedOrigins      []string
+	smtpHost            string
+	smtpPort            int
+	smtpUser            string
+	smtpPass            string
+	smtpFrom            string
+	smtpTLS             mailer.TLSPolicy
+	unisenderAPIKey     string
+	unisenderListID     string
+	unisenderFromName   string
+	uploadsDir          string
+	publicBaseURL       string
+	telegramToken       string
+	telegramAdminChatID string
 }
 
 func loadConfig() config {
 	cfg := config{
-		serverPort:        getEnv("SERVER_PORT", "8080"),
-		dbURL:             requireEnv("DB_URL"),
-		redisAddr:         getEnv("REDIS_URL", "localhost:6379"),
-		allowedOrigins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
-		kafkaBrokers:      strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
-		smtpHost:          getEnv("SMTP_HOST", "localhost"),
-		smtpUser:          getEnv("SMTP_USER", ""),
-		smtpPass:          getEnv("SMTP_PASS", ""),
-		smtpFrom:          getEnv("SMTP_FROM", "noreply@snabju.ru"),
-		smtpTLS:           mailer.ParseTLSPolicy(getEnv("SMTP_TLS", "none")),
-		unisenderAPIKey:   getEnv("UNISENDER_API_KEY", ""),
-		unisenderListID:   getEnv("UNISENDER_LIST_ID", ""),
-		unisenderFromName: getEnv("UNISENDER_FROM_NAME", "Snabju"),
-		uploadsDir:        getEnv("UPLOADS_DIR", "./uploads"),
-		publicBaseURL:     getEnv("PUBLIC_BASE_URL", "http://localhost:8080"),
+		serverPort:          getEnv("SERVER_PORT", "8080"),
+		dbURL:               requireEnv("DB_URL"),
+		redisAddr:           getEnv("REDIS_URL", "localhost:6379"),
+		allowedOrigins:      strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		smtpHost:            getEnv("SMTP_HOST", "localhost"),
+		smtpUser:            getEnv("SMTP_USER", ""),
+		smtpPass:            getEnv("SMTP_PASS", ""),
+		smtpFrom:            getEnv("SMTP_FROM", "noreply@snabju.ru"),
+		smtpTLS:             mailer.ParseTLSPolicy(getEnv("SMTP_TLS", "none")),
+		unisenderAPIKey:     getEnv("UNISENDER_API_KEY", ""),
+		unisenderListID:     getEnv("UNISENDER_LIST_ID", ""),
+		unisenderFromName:   getEnv("UNISENDER_FROM_NAME", "Snabju"),
+		uploadsDir:          getEnv("UPLOADS_DIR", "./uploads"),
+		publicBaseURL:       getEnv("PUBLIC_BASE_URL", "http://localhost:8080"),
+		telegramToken:       getEnv("TELEGRAM_BOT_TOKEN", ""),
+		telegramAdminChatID: getEnv("TELEGRAM_ADMIN_CHAT_ID", ""),
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")

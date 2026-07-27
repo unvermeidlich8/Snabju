@@ -21,12 +21,14 @@ type CartItem struct {
 
 type CartRepository interface {
 	Add(ctx context.Context, item *CartItem) error
+	GetByID(ctx context.Context, id uuid.UUID) (*CartItem, error)
 	Update(ctx context.Context, id uuid.UUID, qty int) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListBySession(ctx context.Context, sessionID string) ([]CartItem, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]CartItem, error)
 	MigrateSession(ctx context.Context, sessionID string, userID uuid.UUID) error
 	Clear(ctx context.Context, userID uuid.UUID) error
+	ClearBySession(ctx context.Context, sessionID string) error
 }
 
 type CartService interface {

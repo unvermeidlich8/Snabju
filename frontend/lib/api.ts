@@ -1,4 +1,4 @@
-import type { Category, Product, ProductSpec, CartItem, Order, User, CatIcon, ProductTag, MarkdownItem } from './types';
+import type { Category, Product, ProductSpec, CartItem, Order, OrderItem, User, CatIcon, ProductTag, MarkdownItem } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -26,6 +26,7 @@ function mapCategory(r: Record<string, any>): Category {
     icon: r.icon ?? '',
     imageUrl: r.image_url ?? '',
     sortOrder: r.sort_order ?? 0,
+    productsCount: r.products_count ?? 0,
   };
 }
 
@@ -55,6 +56,7 @@ function mapProduct(r: Record<string, any>): Product {
     reviews: r.reviews ?? 0,
     tag: (r.tag as ProductTag) ?? null,
     imageUrl: r.image_url ?? '',
+    isActive: r.is_active ?? true,
     specs: (r.specs ?? []).map(mapSpec),
   };
 }
@@ -81,6 +83,19 @@ function mapMarkdownItem(r: Record<string, any>): MarkdownItem {
   };
 }
 
+function mapOrderItem(r: Record<string, any>): OrderItem {
+  return {
+    id: r.id,
+    productId: r.product_id ?? '',
+    title: r.title ?? '',
+    sku: r.sku ?? '',
+    unit: r.unit ?? '',
+    price: Number(r.price ?? 0),
+    qty: r.qty ?? 0,
+    total: Number(r.total ?? 0),
+  };
+}
+
 function mapOrder(r: Record<string, any>): Order {
   return {
     id: r.id,
@@ -92,6 +107,7 @@ function mapOrder(r: Record<string, any>): Order {
     contactName: r.contact_name ?? '',
     contactPhone: r.contact_phone ?? '',
     address: r.address ?? '',
+    items: (r.items ?? []).map(mapOrderItem),
     createdAt: r.created_at ?? '',
   };
 }
@@ -119,15 +135,21 @@ export const api = {
     return cats;
   },
 
-  async getProducts(params: { category_id?: string; q?: string; limit?: number; offset?: number; sort?: string } = {}): Promise<{ items: Product[]; total: number }> {
+  async getProducts(params: { category_id?: string; q?: string; limit?: number; offset?: number; sort?: string; brands?: string[] } = {}): Promise<{ items: Product[]; total: number }> {
     const q = new URLSearchParams();
     if (params.category_id) q.set('category_id', params.category_id);
     if (params.q) q.set('q', params.q);
     if (params.limit != null) q.set('limit', String(params.limit));
     if (params.offset != null) q.set('offset', String(params.offset));
     if (params.sort) q.set('sort', params.sort);
+    params.brands?.forEach(brand => q.append('brand', brand));
     const data = await req<{ items: Record<string, any>[]; total: number }>(`/api/v1/products?${q}`);
     return { items: (data.items ?? []).map(mapProduct), total: data.total ?? 0 };
+  },
+
+  async getBrands(): Promise<string[]> {
+    const data = await req<{ items: string[] }>('/api/v1/brands');
+    return data.items ?? [];
   },
 
   async getProduct(id: string): Promise<Product> {
@@ -271,6 +293,13 @@ export const api = {
     await req<void>(`/api/v1/admin/categories/${id}`, { method: 'DELETE' });
   },
 
+  async adminListProducts(params: { q?: string } = {}): Promise<{ items: Product[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.q) q.set('q', params.q);
+    const data = await req<{ items: Record<string, any>[]; total: number }>(`/api/v1/admin/products?${q}`);
+    return { items: (data.items ?? []).map(mapProduct), total: data.total ?? 0 };
+  },
+
   async adminUpdateProduct(id: string, data: {
     title: string; sub?: string;
     category_id?: string;
@@ -279,6 +308,7 @@ export const api = {
     price_box?: number | null; box_qty?: number;
     stock?: number; stock_unit?: string;
     tag?: string; image_url?: string;
+    is_active?: boolean;
     specs?: { key: string; value: string }[];
   }): Promise<Product> {
     const r = await req<Record<string, any>>(`/api/v1/admin/products/${id}`, {

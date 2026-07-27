@@ -33,6 +33,7 @@ const productCols = `id, sku, title,
 	rating, reviews,
 	COALESCE(tag, '')        AS tag,
 	COALESCE(image_url, '')  AS image_url,
+	is_active,
 	created_at, updated_at`
 
 func scanProduct(rows pgx.Rows) (domain.Product, error) {
@@ -40,7 +41,7 @@ func scanProduct(rows pgx.Rows) (domain.Product, error) {
 	err := rows.Scan(
 		&p.ID, &p.SKU, &p.Title, &p.Sub, &p.CategoryID, &p.CatLabel, &p.Unit, &p.UnitDetail,
 		&p.Price, &p.OldPrice, &p.PriceBox, &p.BoxQty, &p.Stock, &p.StockUnit, &p.ETA,
-		&p.Rating, &p.Reviews, &p.Tag, &p.ImageURL, &p.CreatedAt, &p.UpdatedAt,
+		&p.Rating, &p.Reviews, &p.Tag, &p.ImageURL, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
 	)
 	return p, err
 }
@@ -84,12 +85,23 @@ func sortClause(s string) string {
 func (r *postgresProductRepo) ListPaged(ctx context.Context, f domain.ProductFilter) (domain.ProductPage, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+productCols+`, COUNT(*) OVER() AS total
-		FROM products
-		WHERE ($1::uuid IS NULL OR category_id = $1)
-		AND ($2 = '' OR title ILIKE '%' || $2 || '%' OR sku ILIKE '%' || $2 || '%')
+		FROM products p
+		WHERE ($1::uuid IS NULL OR p.category_id = $1)
+		AND ($2 = '' OR p.title ILIKE '%' || $2 || '%' OR p.sku ILIKE '%' || $2 || '%')
+		AND (
+			COALESCE(array_length($3::text[], 1), 0) = 0
+			OR EXISTS (
+				SELECT 1
+				FROM product_specs ps
+				WHERE ps.product_id = p.id
+				  AND ps.key = 'Бренд'
+				  AND ps.value = ANY($3::text[])
+			)
+		)
+		AND (p.is_active OR $6)
 		`+sortClause(f.Sort)+`
-		LIMIT $3 OFFSET $4`,
-		f.CategoryID, f.Search, f.Limit, f.Offset,
+		LIMIT $4 OFFSET $5`,
+		f.CategoryID, f.Search, f.Brands, f.Limit, f.Offset, f.IncludeInactive,
 	)
 	if err != nil {
 		return domain.ProductPage{}, fmt.Errorf("postgres.ProductRepo.ListPaged: %w", err)
@@ -103,7 +115,7 @@ func (r *postgresProductRepo) ListPaged(ctx context.Context, f domain.ProductFil
 		err := rows.Scan(
 			&p.ID, &p.SKU, &p.Title, &p.Sub, &p.CategoryID, &p.CatLabel, &p.Unit, &p.UnitDetail,
 			&p.Price, &p.OldPrice, &p.PriceBox, &p.BoxQty, &p.Stock, &p.StockUnit, &p.ETA,
-			&p.Rating, &p.Reviews, &p.Tag, &p.ImageURL, &p.CreatedAt, &p.UpdatedAt,
+			&p.Rating, &p.Reviews, &p.Tag, &p.ImageURL, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
 			&total,
 		)
 		if err != nil {
@@ -265,11 +277,11 @@ func (r *postgresProductRepo) Update(ctx context.Context, id uuid.UUID, in domai
 		`UPDATE products SET
 			title=$2, sub=$3, category_id=$4, cat_label=$5, unit=$6,
 			price=$7, price_box=$8, box_qty=$9, stock=$10, stock_unit=$11,
-			tag=$12, image_url=NULLIF($13,''), updated_at=$14
+			tag=$12, image_url=NULLIF($13,''), is_active=$14, updated_at=$15
 		WHERE id=$1`,
 		id, in.Title, in.Sub, in.CategoryID, catLabel, in.Unit,
 		in.Price, in.PriceBox, in.BoxQty, in.Stock, in.StockUnit,
-		in.Tag, in.ImageURL, now,
+		in.Tag, in.ImageURL, in.IsActive, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.ProductRepo.Update: %w", err)

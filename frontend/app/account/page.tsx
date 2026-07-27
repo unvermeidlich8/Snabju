@@ -132,6 +132,7 @@ function ProfileView() {
           contactName: user?.name ?? '',
           contactPhone: user?.phone ?? '',
           address: '',
+          items: [],
           createdAt: new Date().toISOString(),
         };
         setOrders([fake, ...list]);
@@ -283,14 +284,13 @@ function ProfileView() {
 
 export default function AccountPage() {
   const { user, loading } = useAuth();
-  const { mode } = useMode();
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="px-4 pt-4 pb-1.5 flex items-center justify-between">
         <BrandMark size={18} />
-        <ModeChip mode={mode} />
+        <ModeChip />
       </div>
 
       {loading ? (

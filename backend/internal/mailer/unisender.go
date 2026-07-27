@@ -43,7 +43,7 @@ func (u *UniSenderMailer) send(_ context.Context, to, subject, htmlBody string) 
 	}
 
 	req, err := http.NewRequest(http.MethodPost,
-		"https://go1.unisender.ru/ru/transactional/api/v1/email/send.json",
+		"https://goapi.unisender.ru/ru/transactional/api/v1/email/send.json",
 		bytes.NewReader(body),
 	)
 	if err != nil {

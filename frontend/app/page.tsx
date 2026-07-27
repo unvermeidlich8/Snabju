@@ -58,7 +58,7 @@ export default function HomePage() {
       {/* Categories */}
       {categories.length > 0 && (
         <>
-          <SectionHeader title="Категории" action="всё" onAction={() => router.push('/catalog')} />
+          <SectionHeader title="Категории" action="всё" onAction={() => router.push('/categories')} />
           <div className="grid grid-cols-3 gap-3 px-4 pb-6">
             {categories.slice(0, 6).map(c => (
               <CatTile key={c.id} cat={c} onClick={() => router.push(`/catalog?category=${c.id}`)} />

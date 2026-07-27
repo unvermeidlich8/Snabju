@@ -23,14 +23,14 @@ export default function CartPage() {
   const { mode } = useMode();
   const { items, loading, updateQty, removeFromCart } = useCart();
 
-  const itemPrice = (it: typeof items[0]) =>
-    it.markdownPrice != null
-      ? it.markdownPrice
-      : it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price;
+  const itemPrice = (it: typeof items[0]) => {
+    if (it.markdownPrice != null) return it.markdownPrice;
+    const base = it.product.price;
+    return mode === 'b2b' ? Math.round(base * 0.85) : base;
+  };
 
   const subtotal = items.reduce((s, it) => s + itemPrice(it) * it.qty, 0);
-  const b2bDiscount = mode === 'b2b' ? subtotal * 0.09 : 0;
-  const total = subtotal - b2bDiscount;
+  const total = subtotal;
 
   if (loading) {
     return (
@@ -69,7 +69,7 @@ export default function CartPage() {
             {items.length} {items.length === 1 ? 'позиция' : 'позиции'} · {items.reduce((s, i) => s + i.qty, 0)} ед.
           </div>
         </div>
-        <ModeChip mode={mode} />
+        <ModeChip />
       </div>
 
       {/* Items */}
@@ -121,7 +121,6 @@ export default function CartPage() {
       <div className="px-4 pt-3.5">
         <div className="bg-white border border-divider rounded-[14px] p-3.5 flex flex-col gap-2">
           <Row label="Товары" value={fmt(subtotal)} />
-          {mode === 'b2b' && <Row label="Скидка опт −9%" value={`−${fmt(b2bDiscount)}`} accent />}
           <div className="h-px bg-divider my-1" />
           <div className="flex justify-between items-baseline">
             <span className="text-base font-bold text-ink">Итого</span>

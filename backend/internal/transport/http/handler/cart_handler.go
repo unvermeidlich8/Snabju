@@ -42,7 +42,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 		MarkdownItemID *string `json:"markdown_item_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "некорректное тело запроса")
 		return
 	}
 
@@ -52,18 +52,18 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 	if req.MarkdownItemID != nil && *req.MarkdownItemID != "" {
 		id, err := uuid.Parse(*req.MarkdownItemID)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid markdown_item_id")
+			writeError(w, http.StatusBadRequest, "некорректный markdown_item_id")
 			return
 		}
 		markdownItemID = &id
 	} else {
 		if req.ProductID == nil || *req.ProductID == "" {
-			writeError(w, http.StatusBadRequest, "product_id or markdown_item_id required")
+			writeError(w, http.StatusBadRequest, "нужно передать product_id или markdown_item_id")
 			return
 		}
 		id, err := uuid.Parse(*req.ProductID)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid product_id")
+			writeError(w, http.StatusBadRequest, "некорректный product_id")
 			return
 		}
 		productID = id
@@ -84,7 +84,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid item id")
+		writeError(w, http.StatusBadRequest, "некорректный id позиции корзины")
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		Qty int `json:"qty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "некорректное тело запроса")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid item id")
+		writeError(w, http.StatusBadRequest, "некорректный id позиции корзины")
 		return
 	}
 

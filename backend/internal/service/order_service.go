@@ -13,16 +13,26 @@ import (
 )
 
 type orderService struct {
-	orderRepo domain.OrderRepository
-	userRepo  domain.UserRepository
-	publisher domain.EventPublisher
+	orderRepo   domain.OrderRepository
+	userRepo    domain.UserRepository
+	cartRepo    domain.CartRepository
+	productRepo domain.ProductRepository
+	publisher   domain.EventPublisher
 }
 
-func NewOrderService(orderRepo domain.OrderRepository, userRepo domain.UserRepository, publisher domain.EventPublisher) domain.OrderService {
+func NewOrderService(
+	orderRepo domain.OrderRepository,
+	userRepo domain.UserRepository,
+	cartRepo domain.CartRepository,
+	productRepo domain.ProductRepository,
+	publisher domain.EventPublisher,
+) domain.OrderService {
 	return &orderService{
-		orderRepo: orderRepo,
-		userRepo:  userRepo,
-		publisher: publisher,
+		orderRepo:   orderRepo,
+		userRepo:    userRepo,
+		cartRepo:    cartRepo,
+		productRepo: productRepo,
+		publisher:   publisher,
 	}
 }
 
@@ -40,11 +50,78 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 		return nil, domain.ErrValidation{Field: "session_id", Msg: "required for guest orders"}
 	}
 
+	// Fetch cart items
+	var cartItems []domain.CartItem
+	var err error
+	if o.UserID != nil {
+		cartItems, err = s.cartRepo.ListByUser(ctx, *o.UserID)
+	} else {
+		cartItems, err = s.cartRepo.ListBySession(ctx, o.SessionID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("orderService.Create: fetch cart: %w", err)
+	}
+
+	// Build order items and calculate total
+	orderID := uuid.New()
+	var orderItems []domain.OrderItem
+	var total float64
+
+	for _, ci := range cartItems {
+		product, err := s.productRepo.GetByID(ctx, ci.ProductID)
+		if err != nil {
+			return nil, fmt.Errorf("orderService.Create: fetch product %s: %w", ci.ProductID, err)
+		}
+
+		price := product.Price
+		if ci.MarkdownPrice != nil {
+			price = *ci.MarkdownPrice
+		} else if ci.AsPallet && product.PriceBox != nil {
+			price = *product.PriceBox
+		}
+
+		itemTotal := price * float64(ci.Qty)
+		total += itemTotal
+
+		orderItems = append(orderItems, domain.OrderItem{
+			ID:        uuid.New(),
+			OrderID:   orderID,
+			ProductID: product.ID,
+			Title:     product.Title,
+			SKU:       product.SKU,
+			Unit:      product.Unit,
+			Price:     price,
+			Qty:       ci.Qty,
+			Total:     itemTotal,
+		})
+	}
+
+	o.ID = orderID
 	o.Status = "Новый"
 	o.StatusKind = domain.OrderStatusPending
+	o.ItemsCount = len(orderItems)
+	o.Total = total
+	o.Items = orderItems
 
 	if err := s.orderRepo.Create(ctx, o); err != nil {
 		return nil, fmt.Errorf("orderService.Create: %w", err)
+	}
+
+	if len(orderItems) > 0 {
+		if err := s.orderRepo.CreateItems(ctx, orderItems); err != nil {
+			return nil, fmt.Errorf("orderService.Create: save items: %w", err)
+		}
+	}
+
+	// Clear cart
+	if o.UserID != nil {
+		if err := s.cartRepo.Clear(ctx, *o.UserID); err != nil {
+			slog.Error("orderService.Create: clear cart by user", "err", err)
+		}
+	} else {
+		if err := s.cartRepo.ClearBySession(ctx, o.SessionID); err != nil {
+			slog.Error("orderService.Create: clear cart by session", "err", err)
+		}
 	}
 
 	s.publishOrderConfirmed(ctx, o)
@@ -116,8 +193,33 @@ func (s *orderService) ListAll(ctx context.Context, limit, offset int) ([]domain
 }
 
 func (s *orderService) UpdateStatus(ctx context.Context, id uuid.UUID, kind domain.OrderStatus, status string) error {
+	order, err := s.orderRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("orderService.UpdateStatus: get order: %w", err)
+	}
 	if err := s.orderRepo.UpdateStatus(ctx, id, kind, status); err != nil {
 		return fmt.Errorf("orderService.UpdateStatus: %w", err)
 	}
+	s.publishOrderStatusChanged(ctx, order, kind, status)
 	return nil
+}
+
+func (s *orderService) publishOrderStatusChanged(ctx context.Context, o *domain.Order, kind domain.OrderStatus, status string) {
+	payload, err := json.Marshal(domain.OrderStatusChangedPayload{
+		OrderID:       o.ID.String(),
+		ContactName:   o.ContactName,
+		ContactPhone:  o.ContactPhone,
+		NewStatus:     status,
+		NewStatusKind: kind,
+	})
+	if err != nil {
+		slog.Error("order: marshal status changed payload", "err", err)
+		return
+	}
+	if err := s.publisher.Publish(ctx, "notifications", domain.Event{
+		Type:    domain.EventOrderStatusChanged,
+		Payload: payload,
+	}); err != nil {
+		slog.Error("order: publish status changed event", "err", err)
+	}
 }

@@ -7,12 +7,13 @@ import (
 )
 
 type Category struct {
-	ID        uuid.UUID `json:"id"`
-	Title     string    `json:"title"`
-	Swatch    string    `json:"swatch"`
-	Icon      string    `json:"icon"`
-	ImageURL  string    `json:"image_url"`
-	SortOrder int       `json:"sort_order"`
+	ID            uuid.UUID `json:"id"`
+	Title         string    `json:"title"`
+	Swatch        string    `json:"swatch"`
+	Icon          string    `json:"icon"`
+	ImageURL      string    `json:"image_url"`
+	SortOrder     int       `json:"sort_order"`
+	ProductsCount int       `json:"products_count"`
 }
 
 type CreateCategoryInput struct {

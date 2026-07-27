@@ -32,6 +32,27 @@ func (r *postgresCartRepo) Add(ctx context.Context, item *domain.CartItem) error
 	return nil
 }
 
+func (r *postgresCartRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.CartItem, error) {
+	row := r.pool.QueryRow(ctx,
+		`SELECT c.id, c.session_id, c.user_id, c.product_id, c.qty, c.as_pallet,
+		        c.markdown_item_id, m.price, c.created_at
+		 FROM cart_items c
+		 LEFT JOIN markdown_items m ON m.id = c.markdown_item_id
+		 WHERE c.id = $1`,
+		id,
+	)
+
+	var item domain.CartItem
+	if err := row.Scan(
+		&item.ID, &item.SessionID, &item.UserID, &item.ProductID,
+		&item.Qty, &item.AsPallet, &item.MarkdownItemID, &item.MarkdownPrice, &item.CreatedAt,
+	); err != nil {
+		return nil, domain.ErrNotFound
+	}
+
+	return &item, nil
+}
+
 func (r *postgresCartRepo) Update(ctx context.Context, id uuid.UUID, qty int) error {
 	result, err := r.pool.Exec(ctx, `UPDATE cart_items SET qty = $1 WHERE id = $2`, qty, id)
 	if err != nil {
@@ -112,6 +133,14 @@ func (r *postgresCartRepo) Clear(ctx context.Context, userID uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, `DELETE FROM cart_items WHERE user_id = $1`, userID)
 	if err != nil {
 		return fmt.Errorf("postgres.CartRepo.Clear: %w", err)
+	}
+	return nil
+}
+
+func (r *postgresCartRepo) ClearBySession(ctx context.Context, sessionID string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM cart_items WHERE session_id = $1`, sessionID)
+	if err != nil {
+		return fmt.Errorf("postgres.CartRepo.ClearBySession: %w", err)
 	}
 	return nil
 }

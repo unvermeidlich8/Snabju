@@ -41,7 +41,10 @@ export function CatTile({ cat, onClick }: CatTileProps) {
           </>
         )}
       </div>
-      <div className="text-[13px] font-semibold text-ink leading-tight">{cat.title}</div>
+      <div>
+        <div className="text-[13px] font-semibold text-ink leading-tight">{cat.title}</div>
+        <div className="mt-0.5 text-[11px] text-muted">{cat.productsCount} товаров</div>
+      </div>
     </button>
   );
 }

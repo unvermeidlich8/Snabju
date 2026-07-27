@@ -8,11 +8,13 @@ import type { EnrichedCartItem } from '@/lib/types';
 interface CartContextValue {
   items: EnrichedCartItem[];
   loading: boolean;
+  error: string | null;
   addToCart: (productId: string, qty: number, asPallet?: boolean) => Promise<void>;
   addMarkdownToCart: (markdownItemId: string, qty: number) => Promise<void>;
   updateQty: (cartItemId: string, qty: number) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   refresh: () => Promise<void>;
+  clearError: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -21,6 +23,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [items, setItems] = useState<EnrichedCartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = useCallback(() => setError(null), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -45,29 +50,66 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [user, refresh]);
 
   const addToCart = useCallback(async (productId: string, qty: number, asPallet = false) => {
-    await api.addCartItem(productId, qty, asPallet);
-    await refresh();
+    try {
+      await api.addCartItem(productId, qty, asPallet);
+      setError(null);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? 'Не удалось добавить товар в корзину');
+      throw e;
+    }
   }, [refresh]);
 
   const addMarkdownToCart = useCallback(async (markdownItemId: string, qty: number) => {
-    await api.addMarkdownCartItem(markdownItemId, qty);
-    await refresh();
+    try {
+      await api.addMarkdownCartItem(markdownItemId, qty);
+      setError(null);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? 'Не удалось добавить товар в корзину');
+      throw e;
+    }
   }, [refresh]);
 
   const updateQty = useCallback(async (cartItemId: string, qty: number) => {
     if (qty < 1) return;
-    await api.updateCartItem(cartItemId, qty);
-    // Optimistic local update
-    setItems(prev => prev.map(it => it.id === cartItemId ? { ...it, qty } : it));
+    try {
+      await api.updateCartItem(cartItemId, qty);
+      setError(null);
+      // Optimistic local update
+      setItems(prev => prev.map(it => it.id === cartItemId ? { ...it, qty } : it));
+    } catch (e: any) {
+      setError(e?.message ?? 'Не удалось изменить количество');
+    }
   }, []);
 
   const removeFromCart = useCallback(async (cartItemId: string) => {
-    await api.removeCartItem(cartItemId);
-    setItems(prev => prev.filter(it => it.id !== cartItemId));
+    try {
+      await api.removeCartItem(cartItemId);
+      setError(null);
+      setItems(prev => prev.filter(it => it.id !== cartItemId));
+    } catch (e: any) {
+      setError(e?.message ?? 'Не удалось удалить товар из корзины');
+    }
   }, []);
 
   return (
-    <CartContext.Provider value={{ items, loading, addToCart, addMarkdownToCart, updateQty, removeFromCart, refresh }}>
+    <CartContext.Provider value={{ items, loading, error, addToCart, addMarkdownToCart, updateQty, removeFromCart, refresh, clearError }}>
+      {error && (
+        <div className="fixed top-4 left-4 right-4 z-[100] flex justify-center pointer-events-none">
+          <div className="pointer-events-auto max-w-2xl w-full bg-[#fff3e0] border border-[#fed7aa] text-[#9a3412] rounded-2xl px-4 py-3 shadow-lg flex items-start gap-3">
+            <div className="flex-1 text-sm font-medium leading-5">{error}</div>
+            <button
+              type="button"
+              onClick={clearError}
+              className="text-lg leading-none cursor-pointer opacity-70 hover:opacity-100"
+              aria-label="Закрыть сообщение"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       {children}
     </CartContext.Provider>
   );

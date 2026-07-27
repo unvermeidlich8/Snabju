@@ -20,17 +20,22 @@ func NewPostgresCategoryRepo(pool *pgxpool.Pool) domain.CategoryRepository {
 	return &postgresCategoryRepo{pool: pool}
 }
 
-const categoryCols = `id, title, swatch, icon, COALESCE(image_url, '') AS image_url, sort_order`
+const categoryCols = `c.id, c.title, c.swatch, c.icon, COALESCE(c.image_url, '') AS image_url, c.sort_order,
+	COUNT(p.id) FILTER (WHERE p.is_active) AS products_count`
 
 func scanCategory(row interface{ Scan(...any) error }) (domain.Category, error) {
 	var c domain.Category
-	err := row.Scan(&c.ID, &c.Title, &c.Swatch, &c.Icon, &c.ImageURL, &c.SortOrder)
+	err := row.Scan(&c.ID, &c.Title, &c.Swatch, &c.Icon, &c.ImageURL, &c.SortOrder, &c.ProductsCount)
 	return c, err
 }
 
 func (r *postgresCategoryRepo) List(ctx context.Context) ([]domain.Category, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT `+categoryCols+` FROM categories ORDER BY sort_order`,
+		`SELECT `+categoryCols+`
+		 FROM categories c
+		 LEFT JOIN products p ON p.category_id = c.id
+		 GROUP BY c.id, c.title, c.swatch, c.icon, c.image_url, c.sort_order
+		 ORDER BY c.sort_order`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.CategoryRepo.List: %w", err)
@@ -40,7 +45,7 @@ func (r *postgresCategoryRepo) List(ctx context.Context) ([]domain.Category, err
 	var result []domain.Category
 	for rows.Next() {
 		var c domain.Category
-		if err := rows.Scan(&c.ID, &c.Title, &c.Swatch, &c.Icon, &c.ImageURL, &c.SortOrder); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &c.Swatch, &c.Icon, &c.ImageURL, &c.SortOrder, &c.ProductsCount); err != nil {
 			return nil, fmt.Errorf("postgres.CategoryRepo.List scan: %w", err)
 		}
 		result = append(result, c)
@@ -51,8 +56,12 @@ func (r *postgresCategoryRepo) List(ctx context.Context) ([]domain.Category, err
 func (r *postgresCategoryRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
 	var c domain.Category
 	err := r.pool.QueryRow(ctx,
-		`SELECT `+categoryCols+` FROM categories WHERE id = $1`, id).
-		Scan(&c.ID, &c.Title, &c.Swatch, &c.Icon, &c.ImageURL, &c.SortOrder)
+		`SELECT `+categoryCols+`
+		 FROM categories c
+		 LEFT JOIN products p ON p.category_id = c.id
+		 WHERE c.id = $1
+		 GROUP BY c.id, c.title, c.swatch, c.icon, c.image_url, c.sort_order`, id).
+		Scan(&c.ID, &c.Title, &c.Swatch, &c.Icon, &c.ImageURL, &c.SortOrder, &c.ProductsCount)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound

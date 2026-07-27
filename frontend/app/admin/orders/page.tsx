@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { fmt } from '@/lib/format';
-import type { Order } from '@/lib/types';
+import type { Order, OrderItem } from '@/lib/types';
 
 type StatusKind = Order['statusKind'];
 
@@ -170,6 +170,27 @@ export default function AdminOrdersPage() {
                       <InfoRow label="Адрес / Самовывоз" value={order.address || '—'} />
                       {order.contactPhone && <InfoRow label="Телефон" value={order.contactPhone} mono />}
                     </div>
+
+                    {/* Order items */}
+                    {order.items && order.items.length > 0 && (
+                      <div>
+                        <div className="text-[10.5px] text-muted font-mono uppercase tracking-[0.3px] mb-2">Состав заказа</div>
+                        <div className="flex flex-col gap-1">
+                          {order.items.map((item: OrderItem) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 py-2 border-b border-divider last:border-0">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-ink truncate">{item.title}</div>
+                                <div className="text-xs text-muted font-mono">{item.sku} · {fmt(item.price)}/{item.unit || 'шт'}</div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="text-sm font-bold text-ink font-mono">{fmt(item.total)}</div>
+                                <div className="text-xs text-muted">{item.qty} {item.unit || 'шт'}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     {actions.length > 0 && (

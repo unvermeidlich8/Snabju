@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { Product, Mode } from '@/lib/types';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { PriceBlock } from '@/components/ui/PriceBlock';
@@ -8,10 +9,12 @@ interface ProductCardSmallProps {
   p: Product;
   mode: Mode;
   onClick: () => void;
-  onAddToCart: () => void;
+  onAddToCart: () => Promise<void>;
 }
 
 export function ProductCardSmall({ p, mode, onClick, onAddToCart }: ProductCardSmallProps) {
+  const [adding, setAdding] = useState(false);
+
   return (
     <div
       onClick={onClick}
@@ -22,10 +25,20 @@ export function ProductCardSmall({ p, mode, onClick, onAddToCart }: ProductCardS
       <div className="text-[13px] font-semibold text-ink leading-tight line-clamp-2">{p.title}</div>
       <PriceBlock p={p} mode={mode} size="sm" />
       <button
-        onClick={e => { e.stopPropagation(); onAddToCart(); }}
+        onClick={async e => {
+          e.stopPropagation();
+          if (adding) return;
+          setAdding(true);
+          try {
+            await onAddToCart();
+          } finally {
+            setAdding(false);
+          }
+        }}
+        disabled={adding}
         className="bg-brand border border-divider rounded-[10px] py-2 text-[13px] font-semibold text-ink cursor-pointer w-full"
       >
-        В корзину
+        {adding ? 'Добавляем…' : 'В корзину'}
       </button>
     </div>
   );
