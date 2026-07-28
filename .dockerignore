@@ -1,0 +1,9 @@
+.git
+.github
+.env
+.env.*
+frontend
+node_modules
+.next
+*.log
+*.xlsx

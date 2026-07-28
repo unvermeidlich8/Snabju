@@ -40,4 +40,4 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" \
-            'DEPLOY_BRANCH=master bash /opt/snabju/scripts/deploy-production.sh'
+            'cd /home/deploy/snabju && git pull --ff-only origin master && DEPLOY_BRANCH=master bash scripts/deploy-production.sh'

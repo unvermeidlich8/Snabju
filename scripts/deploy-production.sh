@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Runs on the production server. The repository must be cloned at /opt/snabju.
+# Runs on the production server. The repository must be cloned at /home/deploy/snabju.
 set -Eeuo pipefail
 
-project_dir=/opt/snabju
+project_dir=/home/deploy/snabju
 branch="${DEPLOY_BRANCH:-master}"
 
 if [[ ! "$branch" =~ ^[A-Za-z0-9._/-]+$ ]]; then
