@@ -39,6 +39,20 @@ In the Environment settings, optionally require an approval before production
 deployments. In repository settings, protect `master` and require the `CI`
 status checks before merging pull requests.
 
+## Protecting the production branch
+
+In GitHub, open **Settings → Branches → Add branch protection rule** and use
+`master` as the branch name pattern. Enable the following options:
+
+- Require a pull request before merging.
+- Require status checks to pass before merging, then select `Backend checks`
+  and `Frontend checks`.
+- Require branches to be up to date before merging.
+- Optionally, do not allow bypassing the above settings.
+
+Afterward, make changes in a feature branch and merge a pull request into
+`master`. A successful merge triggers CI and then the production deployment.
+
 ## Rollback
 
 To roll back code, revert the problematic commit on `master`; CI will deploy the
