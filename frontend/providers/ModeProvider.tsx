@@ -12,21 +12,21 @@ interface ModeContextValue {
 const ModeContext = createContext<ModeContextValue | null>(null);
 
 export function ModeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<Mode>('b2c');
+  const [mode, setModeState] = useState<Mode>('b2b');
   const [modeSelected, setModeSelected] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('mode') as Mode | null;
-    if (saved === 'b2b' || saved === 'b2c') {
-      setModeState(saved);
+    if (saved === 'b2b') {
+      setModeState('b2b');
       setModeSelected(true);
     }
   }, []);
 
   const setMode = useCallback((m: Mode) => {
-    setModeState(m);
+    setModeState('b2b');
     setModeSelected(true);
-    localStorage.setItem('mode', m);
+    localStorage.setItem('mode', 'b2b');
   }, []);
 
   return (

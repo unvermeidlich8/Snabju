@@ -24,7 +24,7 @@ func (r *postgresCartRepo) Add(ctx context.Context, item *domain.CartItem) error
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO cart_items(id, session_id, user_id, product_id, qty, as_pallet, markdown_item_id, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		item.ID, item.SessionID, item.UserID, item.ProductID, item.Qty, item.AsPallet, item.MarkdownItemID, item.CreatedAt,
+		item.ID, item.SessionID, item.UserID, item.ProductID, item.Qty, item.IsBox, item.MarkdownItemID, item.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("postgres.CartRepo.Add: %w", err)
@@ -45,7 +45,7 @@ func (r *postgresCartRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.C
 	var item domain.CartItem
 	if err := row.Scan(
 		&item.ID, &item.SessionID, &item.UserID, &item.ProductID,
-		&item.Qty, &item.AsPallet, &item.MarkdownItemID, &item.MarkdownPrice, &item.CreatedAt,
+		&item.Qty, &item.IsBox, &item.MarkdownItemID, &item.MarkdownPrice, &item.CreatedAt,
 	); err != nil {
 		return nil, domain.ErrNotFound
 	}
@@ -87,7 +87,7 @@ func (r *postgresCartRepo) listBy(ctx context.Context, query string, arg any) ([
 		var item domain.CartItem
 		if err := rows.Scan(
 			&item.ID, &item.SessionID, &item.UserID, &item.ProductID,
-			&item.Qty, &item.AsPallet, &item.MarkdownItemID, &item.MarkdownPrice, &item.CreatedAt,
+			&item.Qty, &item.IsBox, &item.MarkdownItemID, &item.MarkdownPrice, &item.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("postgres.CartRepo list scan: %w", err)
 		}

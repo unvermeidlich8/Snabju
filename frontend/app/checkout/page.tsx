@@ -53,7 +53,8 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState(1);
   const delivery: DeliveryType = 'pickup';
-  const [pay, setPay] = useState<PayType>(mode === 'b2b' ? 'invoice' : 'card');
+  const [pay] = useState<PayType>('invoice');
+	const [company, setCompany] = useState(user?.company ?? '');
   const [address, setAddress] = useState('');
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(formatPhone(user?.phone ?? ''));
@@ -62,7 +63,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const orderTotal = items.reduce((s, it) => s + (it.asPallet ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
+  const orderTotal = items.reduce((s, it) => s + (it.isBox ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
 
   const payOptions: { id: PayType; title: string; sub: string }[] = [
     ...(mode === 'b2b' ? [{ id: 'invoice' as PayType, title: 'Счёт на организацию', sub: 'оплата 14 дней, безнал' }] : []),
@@ -87,6 +88,10 @@ export default function CheckoutPage() {
         contact_name: name.trim(),
         contact_phone: toApiPhone(phone),
         address: address.trim() || 'Самовывоз — Москва, Новокуркинское шоссе 14',
+		delivery_method: delivery,
+		payment_method: pay,
+		comment: comment.trim(),
+		company: company.trim(),
         ...(!user && guestEmail.trim() ? { guest_email: guestEmail.trim() } : {}),
       });
       router.push('/account?orderPlaced=1');
@@ -160,11 +165,7 @@ export default function CheckoutPage() {
       {/* Step 2: Contacts */}
       {step === 2 && (
         <div className="px-4 pt-5 flex flex-col gap-2.5">
-          {mode === 'b2b' && user?.company && (
-            <Field label="Организация">
-              <div className="text-sm text-ink font-medium">{user.company}</div>
-            </Field>
-          )}
+		  <Field label="Организация"><input className={inputCls} placeholder="ООО «Компания»" value={company} onChange={e => setCompany(e.target.value)} /></Field>
           <Field label="Имя получателя">
             <input
               className={inputCls}
@@ -207,9 +208,7 @@ export default function CheckoutPage() {
       {/* Step 3: Payment */}
       {step === 3 && (
         <div className="px-4 pt-5 flex flex-col gap-2.5">
-          {payOptions.map(opt => (
-            <RadioOption key={opt.id} on={pay === opt.id} title={opt.title} sub={opt.sub} onClick={() => setPay(opt.id)} />
-          ))}
+		  <RadioOption on title="Счёт на организацию" sub="Безналичная оплата по выставленному счёту" onClick={() => {}} />
         </div>
       )}
 

@@ -29,26 +29,31 @@ type OrderItem struct {
 }
 
 type Order struct {
-	ID           uuid.UUID   `json:"id"`
-	UserID       *uuid.UUID  `json:"user_id,omitempty"`
-	SessionID    string      `json:"session_id,omitempty"`
-	Status       string      `json:"status"`
-	StatusKind   OrderStatus `json:"status_kind"`
-	ItemsCount   int         `json:"items_count"`
-	Total        float64     `json:"total"`
-	ETA          string      `json:"eta"`
-	ContactName  string      `json:"contact_name"`
-	ContactPhone string      `json:"contact_phone"`
-	Address      string      `json:"address"`
-	GuestEmail   string      `json:"guest_email,omitempty"`
-	Items        []OrderItem `json:"items,omitempty"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
+	ID             uuid.UUID   `json:"id"`
+	UserID         *uuid.UUID  `json:"user_id,omitempty"`
+	SessionID      string      `json:"session_id,omitempty"`
+	Status         string      `json:"status"`
+	StatusKind     OrderStatus `json:"status_kind"`
+	ItemsCount     int         `json:"items_count"`
+	Total          float64     `json:"total"`
+	ETA            string      `json:"eta"`
+	ContactName    string      `json:"contact_name"`
+	ContactPhone   string      `json:"contact_phone"`
+	Address        string      `json:"address"`
+	GuestEmail     string      `json:"guest_email,omitempty"`
+	DeliveryMethod string      `json:"delivery_method"`
+	PaymentMethod  string      `json:"payment_method"`
+	Comment        string      `json:"comment,omitempty"`
+	Company        string      `json:"company"`
+	Items          []OrderItem `json:"items,omitempty"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
 }
 
 type OrderRepository interface {
 	Create(ctx context.Context, o *Order) error
 	CreateItems(ctx context.Context, items []OrderItem) error
+	CreateCheckout(ctx context.Context, o *Order, items []OrderItem, stockByProduct map[uuid.UUID]int) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Order, error)
 	GetItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error)
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]Order, error)

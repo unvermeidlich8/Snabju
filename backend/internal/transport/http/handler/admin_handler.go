@@ -15,10 +15,34 @@ type AdminHandler struct {
 	categoryService domain.CategoryService
 	productService  domain.ProductService
 	orderService    domain.OrderService
+	settingsRepo    domain.SettingsRepository
 }
 
-func NewAdminHandler(categoryService domain.CategoryService, productService domain.ProductService, orderService domain.OrderService) *AdminHandler {
-	return &AdminHandler{categoryService: categoryService, productService: productService, orderService: orderService}
+func NewAdminHandler(categoryService domain.CategoryService, productService domain.ProductService, orderService domain.OrderService, settingsRepo domain.SettingsRepository) *AdminHandler {
+	return &AdminHandler{categoryService: categoryService, productService: productService, orderService: orderService, settingsRepo: settingsRepo}
+}
+
+func (h *AdminHandler) GetB2BDiscount(w http.ResponseWriter, r *http.Request) {
+	percent, err := h.settingsRepo.GetB2BDiscountPercent(r.Context())
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]float64{"percent": percent})
+}
+func (h *AdminHandler) UpdateB2BDiscount(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Percent float64 `json:"percent"`
+	}
+	if json.NewDecoder(r.Body).Decode(&req) != nil || req.Percent < 0 || req.Percent >= 100 {
+		writeError(w, http.StatusBadRequest, "некорректная скидка")
+		return
+	}
+	if err := h.settingsRepo.SetB2BDiscountPercent(r.Context(), req.Percent); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]float64{"percent": req.Percent})
 }
 
 // POST /api/v1/admin/categories

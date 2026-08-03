@@ -1,0 +1,5 @@
+-- +goose Up
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS company VARCHAR(255) NOT NULL DEFAULT '';
+
+-- +goose Down
+ALTER TABLE orders DROP COLUMN IF EXISTS company;

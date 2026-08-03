@@ -132,6 +132,10 @@ function ProfileView() {
           contactName: user?.name ?? '',
           contactPhone: user?.phone ?? '',
           address: '',
+		  deliveryMethod: 'pickup',
+		  paymentMethod: 'card',
+          comment: '',
+		  company: '',
           items: [],
           createdAt: new Date().toISOString(),
         };

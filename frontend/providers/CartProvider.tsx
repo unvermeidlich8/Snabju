@@ -9,7 +9,7 @@ interface CartContextValue {
   items: EnrichedCartItem[];
   loading: boolean;
   error: string | null;
-  addToCart: (productId: string, qty: number, asPallet?: boolean) => Promise<void>;
+  addToCart: (productId: string, qty: number, isBox?: boolean) => Promise<void>;
   addMarkdownToCart: (markdownItemId: string, qty: number) => Promise<void>;
   updateQty: (cartItemId: string, qty: number) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
@@ -49,9 +49,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     refresh().finally(() => setLoading(false));
   }, [user, refresh]);
 
-  const addToCart = useCallback(async (productId: string, qty: number, asPallet = false) => {
+  const addToCart = useCallback(async (productId: string, qty: number, isBox = false) => {
     try {
-      await api.addCartItem(productId, qty, asPallet);
+      await api.addCartItem(productId, qty, isBox);
       setError(null);
       await refresh();
     } catch (e: any) {

@@ -7,17 +7,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type orderService struct {
-	orderRepo   domain.OrderRepository
-	userRepo    domain.UserRepository
-	cartRepo    domain.CartRepository
-	productRepo domain.ProductRepository
-	publisher   domain.EventPublisher
+	orderRepo    domain.OrderRepository
+	userRepo     domain.UserRepository
+	cartRepo     domain.CartRepository
+	productRepo  domain.ProductRepository
+	publisher    domain.EventPublisher
+	settingsRepo domain.SettingsRepository
 }
 
 func NewOrderService(
@@ -25,14 +28,14 @@ func NewOrderService(
 	userRepo domain.UserRepository,
 	cartRepo domain.CartRepository,
 	productRepo domain.ProductRepository,
-	publisher domain.EventPublisher,
+	publisher domain.EventPublisher, settingsRepo domain.SettingsRepository,
 ) domain.OrderService {
 	return &orderService{
 		orderRepo:   orderRepo,
 		userRepo:    userRepo,
 		cartRepo:    cartRepo,
 		productRepo: productRepo,
-		publisher:   publisher,
+		publisher:   publisher, settingsRepo: settingsRepo,
 	}
 }
 
@@ -45,6 +48,21 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	}
 	if strings.TrimSpace(o.Address) == "" {
 		return nil, domain.ErrValidation{Field: "address", Msg: "required"}
+	}
+	if o.DeliveryMethod == "" {
+		o.DeliveryMethod = "pickup"
+	}
+	o.PaymentMethod = "invoice"
+	if o.DeliveryMethod != "pickup" && o.DeliveryMethod != "delivery" {
+		return nil, domain.ErrValidation{Field: "delivery_method", Msg: "некорректный способ получения"}
+	}
+	if o.UserID != nil && o.Company == "" {
+		if user, err := s.userRepo.GetByID(ctx, *o.UserID); err == nil {
+			o.Company = user.Company
+		}
+	}
+	if strings.TrimSpace(o.Company) == "" {
+		return nil, domain.ErrValidation{Field: "company", Msg: "укажите организацию"}
 	}
 	if o.UserID == nil && strings.TrimSpace(o.SessionID) == "" {
 		return nil, domain.ErrValidation{Field: "session_id", Msg: "required for guest orders"}
@@ -61,11 +79,19 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	if err != nil {
 		return nil, fmt.Errorf("orderService.Create: fetch cart: %w", err)
 	}
+	if len(cartItems) == 0 {
+		return nil, domain.ErrValidation{Field: "cart", Msg: "корзина пуста"}
+	}
 
 	// Build order items and calculate total
 	orderID := uuid.New()
 	var orderItems []domain.OrderItem
 	var total float64
+	stockByProduct := make(map[uuid.UUID]int)
+	discount, err := s.settingsRepo.GetB2BDiscountPercent(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("orderService.Create: get B2B discount: %w", err)
+	}
 
 	for _, ci := range cartItems {
 		product, err := s.productRepo.GetByID(ctx, ci.ProductID)
@@ -76,12 +102,25 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 		price := product.Price
 		if ci.MarkdownPrice != nil {
 			price = *ci.MarkdownPrice
-		} else if ci.AsPallet && product.PriceBox != nil {
+		} else if ci.IsBox && product.PriceBox != nil {
 			price = *product.PriceBox
+		}
+		if ci.MarkdownPrice == nil {
+			price = math.Round(price*(100-discount)) / 100
+		}
+
+		unit := product.Unit
+		if ci.IsBox {
+			unit = "коробка"
 		}
 
 		itemTotal := price * float64(ci.Qty)
 		total += itemTotal
+		stockQty := ci.Qty
+		if ci.IsBox {
+			stockQty *= product.BoxQty
+		}
+		stockByProduct[product.ID] += stockQty
 
 		orderItems = append(orderItems, domain.OrderItem{
 			ID:        uuid.New(),
@@ -89,7 +128,7 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 			ProductID: product.ID,
 			Title:     product.Title,
 			SKU:       product.SKU,
-			Unit:      product.Unit,
+			Unit:      unit,
 			Price:     price,
 			Qty:       ci.Qty,
 			Total:     itemTotal,
@@ -97,31 +136,16 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	}
 
 	o.ID = orderID
+	o.CreatedAt = time.Now()
+	o.UpdatedAt = o.CreatedAt
 	o.Status = "Новый"
 	o.StatusKind = domain.OrderStatusPending
 	o.ItemsCount = len(orderItems)
 	o.Total = total
 	o.Items = orderItems
 
-	if err := s.orderRepo.Create(ctx, o); err != nil {
+	if err := s.orderRepo.CreateCheckout(ctx, o, orderItems, stockByProduct); err != nil {
 		return nil, fmt.Errorf("orderService.Create: %w", err)
-	}
-
-	if len(orderItems) > 0 {
-		if err := s.orderRepo.CreateItems(ctx, orderItems); err != nil {
-			return nil, fmt.Errorf("orderService.Create: save items: %w", err)
-		}
-	}
-
-	// Clear cart
-	if o.UserID != nil {
-		if err := s.cartRepo.Clear(ctx, *o.UserID); err != nil {
-			slog.Error("orderService.Create: clear cart by user", "err", err)
-		}
-	} else {
-		if err := s.cartRepo.ClearBySession(ctx, o.SessionID); err != nil {
-			slog.Error("orderService.Create: clear cart by session", "err", err)
-		}
 	}
 
 	s.publishOrderConfirmed(ctx, o)

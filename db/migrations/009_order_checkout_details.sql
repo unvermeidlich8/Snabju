@@ -1,0 +1,13 @@
+-- +goose Up
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_method VARCHAR(32) NOT NULL DEFAULT 'pickup';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32) NOT NULL DEFAULT 'card';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS comment TEXT NOT NULL DEFAULT '';
+
+-- +goose Down
+ALTER TABLE orders DROP COLUMN IF EXISTS comment;
+ALTER TABLE orders DROP COLUMN IF EXISTS payment_method;
+ALTER TABLE orders DROP COLUMN IF EXISTS delivery_method;
+-- +goose Down
+ALTER TABLE orders DROP COLUMN IF EXISTS comment;
+ALTER TABLE orders DROP COLUMN IF EXISTS payment_method;
+ALTER TABLE orders DROP COLUMN IF EXISTS delivery_method;

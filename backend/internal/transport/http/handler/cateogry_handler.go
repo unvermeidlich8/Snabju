@@ -3,6 +3,7 @@ package handler
 import (
 	"Snabju/backend/internal/domain"
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -13,12 +14,14 @@ import (
 type CatalogHandler struct {
 	categoryService domain.CategoryService
 	productService  domain.ProductService
+	settingsRepo    domain.SettingsRepository
 }
 
-func NewCatalogHandler(categoryService domain.CategoryService, productService domain.ProductService) *CatalogHandler {
+func NewCatalogHandler(categoryService domain.CategoryService, productService domain.ProductService, settingsRepo domain.SettingsRepository) *CatalogHandler {
 	return &CatalogHandler{
 		categoryService: categoryService,
 		productService:  productService,
+		settingsRepo:    settingsRepo,
 	}
 }
 
@@ -93,6 +96,10 @@ func (h *CatalogHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	if page.Items == nil {
 		page.Items = []domain.Product{}
 	}
+	if err := h.applyB2BPrices(r, page.Items); err != nil {
+		handleServiceError(w, err)
+		return
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items":  page.Items,
@@ -118,6 +125,39 @@ func (h *CatalogHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 		handleServiceError(w, err)
 		return
 	}
+	if !product.IsActive {
+		writeError(w, http.StatusNotFound, "product not found")
+		return
+	}
+	discount, err := h.settingsRepo.GetB2BDiscountPercent(r.Context())
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	product.Price = discountPrice(product.Price, discount)
+	if product.PriceBox != nil {
+		value := discountPrice(*product.PriceBox, discount)
+		product.PriceBox = &value
+	}
+	product.B2BDiscountPercent = discount
 
 	writeJSON(w, http.StatusOK, product)
 }
+
+func (h *CatalogHandler) applyB2BPrices(r *http.Request, products []domain.Product) error {
+	discount, err := h.settingsRepo.GetB2BDiscountPercent(r.Context())
+	if err != nil {
+		return err
+	}
+	for i := range products {
+		products[i].Price = discountPrice(products[i].Price, discount)
+		if products[i].PriceBox != nil {
+			value := discountPrice(*products[i].PriceBox, discount)
+			products[i].PriceBox = &value
+		}
+		products[i].B2BDiscountPercent = discount
+	}
+	return nil
+}
+
+func discountPrice(price, percent float64) float64 { return math.Round(price*(100-percent)) / 100 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { ProductImage } from '@/components/ui/ProductImage';
@@ -20,13 +19,12 @@ function Row({ label, value, accent }: { label: string; value: string; accent?: 
 
 export default function CartPage() {
   const router = useRouter();
-  const { mode } = useMode();
   const { items, loading, updateQty, removeFromCart } = useCart();
 
   const itemPrice = (it: typeof items[0]) => {
     if (it.markdownPrice != null) return it.markdownPrice;
-    const base = it.product.price;
-    return mode === 'b2b' ? Math.round(base * 0.85) : base;
+    const base = it.isBox ? (it.product.priceBox ?? it.product.price) : it.product.price;
+    return base;
   };
 
   const subtotal = items.reduce((s, it) => s + itemPrice(it) * it.qty, 0);
@@ -87,6 +85,9 @@ export default function CartPage() {
                 )}
               </div>
               <div className="text-[13px] font-semibold text-ink leading-tight">{it.product.title}</div>
+              <div className="text-[11px] text-muted">
+                {it.isBox ? `Коробка · ${it.product.boxQty} ${it.product.unit}` : `Штука · ${it.product.unitDetail || it.product.unit}`}
+              </div>
               <div className="text-[11px] text-muted">{it.product.eta}</div>
               <div className="flex items-center justify-between mt-1">
                 <QtyStepper value={it.qty} onChange={v => updateQty(it.id, v)} />

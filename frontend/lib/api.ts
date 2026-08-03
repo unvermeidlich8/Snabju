@@ -48,6 +48,7 @@ function mapProduct(r: Record<string, any>): Product {
     price: Number(r.price ?? 0),
     oldPrice: r.old_price != null ? Number(r.old_price) : null,
     priceBox: r.price_box != null && r.price_box > 0 ? Number(r.price_box) : null,
+	    b2bDiscountPercent: Number(r.b2b_discount_percent ?? 0),
     boxQty: r.box_qty ?? 0,
     stock: r.stock ?? 0,
     stockUnit: r.stock_unit ?? '',
@@ -66,7 +67,9 @@ function mapCartItem(r: Record<string, any>): CartItem {
     id: r.id,
     productId: r.product_id,
     qty: r.qty,
-    asPallet: r.as_pallet ?? false,
+    // Поддерживаем уже запущенный backend до его пересборки: ранее это поле
+    // называлось as_pallet, хотя фактически означало коробку.
+    isBox: r.is_box ?? r.as_pallet ?? false,
     markdownItemId: r.markdown_item_id ?? undefined,
     markdownPrice: r.markdown_price != null ? Number(r.markdown_price) : undefined,
   };
@@ -107,6 +110,10 @@ function mapOrder(r: Record<string, any>): Order {
     contactName: r.contact_name ?? '',
     contactPhone: r.contact_phone ?? '',
     address: r.address ?? '',
+    deliveryMethod: r.delivery_method ?? 'pickup',
+    paymentMethod: r.payment_method ?? 'card',
+    comment: r.comment ?? '',
+    company: r.company ?? '',
     items: (r.items ?? []).map(mapOrderItem),
     createdAt: r.created_at ?? '',
   };
@@ -162,10 +169,12 @@ export const api = {
     return (data.items ?? []).map(mapCartItem);
   },
 
-  async addCartItem(productId: string, qty: number, asPallet = false): Promise<CartItem> {
+  async addCartItem(productId: string, qty: number, isBox = false): Promise<CartItem> {
     const r = await req<Record<string, any>>('/api/v1/cart/items', {
       method: 'POST',
-      body: JSON.stringify({ product_id: productId, qty, as_pallet: asPallet }),
+      // Старый backend принимает as_pallet, новый — is_box. Передаём оба
+      // поля на время бесшовного обновления контейнера.
+      body: JSON.stringify({ product_id: productId, qty, is_box: isBox, as_pallet: isBox }),
     });
     return mapCartItem(r);
   },
@@ -203,7 +212,7 @@ export const api = {
     await req<void>(`/api/v1/cart/items/${id}`, { method: 'DELETE' });
   },
 
-  async createOrder(data: { contact_name: string; contact_phone: string; address: string; guest_email?: string }): Promise<Order> {
+  async createOrder(data: { contact_name: string; contact_phone: string; address: string; guest_email?: string; delivery_method: string; payment_method: string; comment?: string; company: string }): Promise<Order> {
     const r = await req<Record<string, any>>('/api/v1/orders', { method: 'POST', body: JSON.stringify(data) });
     return mapOrder(r);
   },
@@ -252,6 +261,8 @@ export const api = {
     const data = await req<{ items: string[] }>('/api/v1/admin/brands');
     return data.items ?? [];
   },
+  async adminGetB2BDiscount(): Promise<number> { const r = await req<{ percent: number }>('/api/v1/admin/settings/b2b-discount'); return Number(r.percent); },
+  async adminUpdateB2BDiscount(percent: number): Promise<number> { const r = await req<{ percent: number }>('/api/v1/admin/settings/b2b-discount', { method: 'PATCH', body: JSON.stringify({ percent }) }); return Number(r.percent); },
 
   async adminCreateCategory(data: {
     title: string; swatch: string; icon: CatIcon;

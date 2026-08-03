@@ -168,13 +168,23 @@ export default function AdminOrdersPage() {
                       <InfoRow label="Сумма" value={fmt(order.total)} mono />
                       {order.eta && <InfoRow label="ETA" value={order.eta} />}
                       <InfoRow label="Адрес / Самовывоз" value={order.address || '—'} />
+                      <InfoRow label="Получение" value={deliveryLabel(order.deliveryMethod)} />
+                      <InfoRow label="Оплата" value={paymentLabel(order.paymentMethod)} />
+					  <InfoRow label="Организация" value={order.company || '—'} />
                       {order.contactPhone && <InfoRow label="Телефон" value={order.contactPhone} mono />}
                     </div>
 
+                    {order.comment && (
+                      <div className="rounded-xl bg-brand px-3.5 py-3">
+                        <div className="text-[10.5px] text-muted font-mono uppercase tracking-[0.3px] mb-1">Комментарий клиента</div>
+                        <div className="text-sm text-ink">{order.comment}</div>
+                      </div>
+                    )}
+
                     {/* Order items */}
                     {order.items && order.items.length > 0 && (
-                      <div>
-                        <div className="text-[10.5px] text-muted font-mono uppercase tracking-[0.3px] mb-2">Состав заказа</div>
+                      <div className="rounded-xl border p-3.5" style={{ background: '#fff8f2', borderColor: '#fed7aa' }}>
+                        <div className="text-[10.5px] font-mono uppercase tracking-[0.3px] mb-2" style={{ color: '#c2410c' }}>Состав заказа</div>
                         <div className="flex flex-col gap-1">
                           {order.items.map((item: OrderItem) => (
                             <div key={item.id} className="flex items-center justify-between gap-3 py-2 border-b border-divider last:border-0">
@@ -220,6 +230,14 @@ export default function AdminOrdersPage() {
       )}
     </div>
   );
+}
+
+function deliveryLabel(method: string) {
+  return method === 'pickup' ? 'Самовывоз' : 'Доставка';
+}
+
+function paymentLabel(method: string) {
+  return ({ invoice: 'Счёт на организацию', card: 'Картой онлайн', split: 'Долями', cash: 'Наличными' } as Record<string, string>)[method] ?? method;
 }
 
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {

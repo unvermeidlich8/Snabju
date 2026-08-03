@@ -38,7 +38,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ProductID      *string `json:"product_id"`
 		Qty            int     `json:"qty"`
-		AsPallet       bool    `json:"as_pallet"`
+		IsBox          bool    `json:"is_box"`
 		MarkdownItemID *string `json:"markdown_item_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -72,7 +72,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 	sessionID := sessionIDFromRequest(r)
 	userID := userIDFromRequest(r)
 
-	item, err := h.cartService.AddItem(r.Context(), sessionID, userID, productID, req.Qty, req.AsPallet, markdownItemID)
+	item, err := h.cartService.AddItem(r.Context(), sessionID, userID, productID, req.Qty, req.IsBox, markdownItemID)
 	if err != nil {
 		handleServiceError(w, err)
 		return
@@ -96,7 +96,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.cartService.UpdateItem(r.Context(), id, req.Qty); err != nil {
+	if err := h.cartService.UpdateItem(r.Context(), sessionIDFromRequest(r), userIDFromRequest(r), id, req.Qty); err != nil {
 		handleServiceError(w, err)
 		return
 	}
@@ -111,7 +111,7 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.cartService.RemoveItem(r.Context(), id); err != nil {
+	if err := h.cartService.RemoveItem(r.Context(), sessionIDFromRequest(r), userIDFromRequest(r), id); err != nil {
 		handleServiceError(w, err)
 		return
 	}

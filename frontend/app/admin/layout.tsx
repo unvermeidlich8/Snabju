@@ -12,6 +12,7 @@ const nav = [
   { href: '/admin/products/new', label: 'Добавить' },
   { href: '/admin/categories',   label: 'Категории' },
   { href: '/admin/markdown',     label: 'Уценка' },
+  { href: '/admin/settings',     label: 'Оптовые условия' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

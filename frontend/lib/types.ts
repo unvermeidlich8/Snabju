@@ -32,6 +32,7 @@ export interface Product {
   price: number;
   oldPrice: number | null;
   priceBox: number | null;
+	  b2bDiscountPercent: number;
   boxQty: number;
   stock: number;
   stockUnit: string;
@@ -48,7 +49,7 @@ export interface CartItem {
   id: string;
   productId: string;
   qty: number;
-  asPallet: boolean;
+  isBox: boolean;
   markdownItemId?: string;
   markdownPrice?: number;
 }
@@ -87,6 +88,10 @@ export interface Order {
   contactName: string;
   contactPhone: string;
   address: string;
+  deliveryMethod: string;
+  paymentMethod: string;
+  comment: string;
+  company: string;
   items: OrderItem[];
   createdAt: string;
 }

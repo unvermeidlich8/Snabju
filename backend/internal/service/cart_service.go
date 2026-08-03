@@ -18,7 +18,7 @@ func NewCartService(cartRepo domain.CartRepository, productRepo domain.ProductRe
 	return &cartService{cartRepo: cartRepo, productRepo: productRepo, markdownRepo: markdownRepo}
 }
 
-func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uuid.UUID, productID uuid.UUID, qty int, asPallet bool, markdownItemID *uuid.UUID) (*domain.CartItem, error) {
+func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uuid.UUID, productID uuid.UUID, qty int, isBox bool, markdownItemID *uuid.UUID) (*domain.CartItem, error) {
 	if qty <= 0 {
 		return nil, domain.ErrValidation{Field: "qty", Msg: "должно быть больше нуля"}
 	}
@@ -28,11 +28,14 @@ func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uui
 		UserID:         userID,
 		ProductID:      productID,
 		Qty:            qty,
-		AsPallet:       asPallet,
+		IsBox:          isBox,
 		MarkdownItemID: markdownItemID,
 	}
 
 	if markdownItemID != nil {
+		if isBox {
+			return nil, domain.ErrValidation{Field: "is_box", Msg: "уценка продаётся поштучно"}
+		}
 		m, err := s.markdownRepo.GetByID(ctx, *markdownItemID)
 		if err != nil {
 			return nil, domain.ErrNotFound
@@ -49,7 +52,7 @@ func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uui
 	existingQty := sumQty(sameItems)
 	targetQty := existingQty + qty
 
-	if err := s.validateAvailableQty(ctx, item.ProductID, markdownItemID, targetQty); err != nil {
+	if err := s.validateAvailableQty(ctx, item.ProductID, markdownItemID, targetQty, isBox); err != nil {
 		return nil, err
 	}
 
@@ -73,7 +76,7 @@ func (s *cartService) AddItem(ctx context.Context, sessionID string, userID *uui
 	return item, nil
 }
 
-func (s *cartService) UpdateItem(ctx context.Context, itemID uuid.UUID, qty int) error {
+func (s *cartService) UpdateItem(ctx context.Context, sessionID string, userID *uuid.UUID, itemID uuid.UUID, qty int) error {
 	if qty <= 0 {
 		return domain.ErrValidation{Field: "qty", Msg: "должно быть больше нуля"}
 	}
@@ -82,6 +85,9 @@ func (s *cartService) UpdateItem(ctx context.Context, itemID uuid.UUID, qty int)
 	if err != nil {
 		return fmt.Errorf("cartService.UpdateItem: %w", err)
 	}
+	if !cartItemBelongsTo(item, sessionID, userID) {
+		return domain.ErrNotFound
+	}
 
 	items, err := s.getScopedItems(ctx, item.SessionID, item.UserID)
 	if err != nil {
@@ -89,7 +95,7 @@ func (s *cartService) UpdateItem(ctx context.Context, itemID uuid.UUID, qty int)
 	}
 
 	relatedQty := sumQty(filterMatchingCartItems(items, item, item.ID))
-	if err := s.validateAvailableQty(ctx, item.ProductID, item.MarkdownItemID, relatedQty+qty); err != nil {
+	if err := s.validateAvailableQty(ctx, item.ProductID, item.MarkdownItemID, relatedQty+qty, item.IsBox); err != nil {
 		return err
 	}
 
@@ -99,11 +105,25 @@ func (s *cartService) UpdateItem(ctx context.Context, itemID uuid.UUID, qty int)
 	return nil
 }
 
-func (s *cartService) RemoveItem(ctx context.Context, itemID uuid.UUID) error {
+func (s *cartService) RemoveItem(ctx context.Context, sessionID string, userID *uuid.UUID, itemID uuid.UUID) error {
+	item, err := s.cartRepo.GetByID(ctx, itemID)
+	if err != nil {
+		return fmt.Errorf("cartService.RemoveItem: %w", err)
+	}
+	if !cartItemBelongsTo(item, sessionID, userID) {
+		return domain.ErrNotFound
+	}
 	if err := s.cartRepo.Delete(ctx, itemID); err != nil {
 		return fmt.Errorf("cartService.RemoveItem: %w", err)
 	}
 	return nil
+}
+
+func cartItemBelongsTo(item *domain.CartItem, sessionID string, userID *uuid.UUID) bool {
+	if userID != nil {
+		return item.UserID != nil && *item.UserID == *userID
+	}
+	return item.UserID == nil && item.SessionID == sessionID
 }
 
 // GetItems возвращает корзину: для авторизованного пользователя по userID, для гостя — по sessionID.
@@ -137,7 +157,7 @@ func (s *cartService) getScopedItems(ctx context.Context, sessionID string, user
 	return s.cartRepo.ListBySession(ctx, sessionID)
 }
 
-func (s *cartService) validateAvailableQty(ctx context.Context, productID uuid.UUID, markdownItemID *uuid.UUID, qty int) error {
+func (s *cartService) validateAvailableQty(ctx context.Context, productID uuid.UUID, markdownItemID *uuid.UUID, qty int, isBox bool) error {
 	if markdownItemID != nil {
 		m, err := s.markdownRepo.GetByID(ctx, *markdownItemID)
 		if err != nil {
@@ -153,6 +173,15 @@ func (s *cartService) validateAvailableQty(ctx context.Context, productID uuid.U
 	if err != nil {
 		return domain.ErrNotFound
 	}
+	if !product.IsActive {
+		return domain.ErrValidation{Field: "product_id", Msg: "товар больше недоступен"}
+	}
+	if isBox {
+		if product.PriceBox == nil || product.BoxQty <= 0 {
+			return domain.ErrValidation{Field: "is_box", Msg: "товар не продаётся коробками"}
+		}
+		qty *= product.BoxQty
+	}
 	if qty > product.Stock {
 		return domain.ErrValidation{Field: "qty", Msg: "превышает доступный остаток"}
 	}
@@ -165,7 +194,7 @@ func filterMatchingCartItems(items []domain.CartItem, target *domain.CartItem, e
 		if excludeID != uuid.Nil && item.ID == excludeID {
 			continue
 		}
-		if item.ProductID != target.ProductID || item.AsPallet != target.AsPallet {
+		if item.ProductID != target.ProductID || item.IsBox != target.IsBox {
 			continue
 		}
 		if !sameOptionalUUID(item.MarkdownItemID, target.MarkdownItemID) {

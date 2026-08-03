@@ -12,7 +12,7 @@ import { QtyStepper } from '@/components/ui/QtyStepper';
 import { ProductCardSmall } from '@/components/cards/ProductCardSmall';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { fmt } from '@/lib/format';
-import type { Mode, Product } from '@/lib/types';
+import type { Product } from '@/lib/types';
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -24,14 +24,14 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [similar, setSimilar] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<'about' | 'specs'>('about');
   const [qty, setQty] = useState(1);
-  const [asPallet, setAsPallet] = useState(false);
+  const [isBox, setIsBox] = useState(false);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     api.getProduct(id).then(p => {
       setProduct(p);
-      setQty(mode === 'b2b' ? (p.boxQty || 1) : 1);
-      setAsPallet(mode === 'b2b');
+      setQty(1);
+      setIsBox(false);
       return api.getProducts({ category_id: p.categoryId, limit: 6 });
     }).then(res => {
       setSimilar(res.items.filter(x => x.id !== id).slice(0, 4));
@@ -47,9 +47,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   }
 
   const p = product;
-  const unitPrice = asPallet ? (p.priceBox ?? p.price) : p.price;
+  const basePrice = isBox ? (p.priceBox ?? p.price) : p.price;
+  const unitPrice = basePrice;
   const total = unitPrice * qty;
-  const effectiveMode: Mode = asPallet ? 'b2b' : 'b2c';
 
   return (
     <div className="max-w-2xl mx-auto relative">
@@ -84,18 +84,23 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           <p className="mt-1.5 mb-0 text-[13px] text-muted">{p.sub}</p>
         </div>
 
-        {/* B2B pallet toggle */}
-        {mode === 'b2b' && (
+        {p.priceBox != null && p.boxQty > 0 && (
           <div className="px-4 pt-3.5">
+            <div className="text-[11px] text-muted font-mono uppercase tracking-[0.4px] mb-1.5">Формат покупки</div>
             <div className="bg-white border border-divider rounded-xl p-1 flex">
-              {[['Розница', false], ['Паллета', true]].map(([label, val]) => (
+              {[
+                ['Штуки', `${fmt(p.price)} / ${p.unit}`, false],
+                ['Коробка', `${p.boxQty} ${p.unit} · ${fmt(p.priceBox)}`, true],
+              ].map(([label, sub, val]) => (
                 <button
                   key={String(label)}
-                  onClick={() => { setAsPallet(val as boolean); setQty(1); }}
-                  className="flex-1 text-center py-2 rounded-[9px] text-[13px] font-semibold cursor-pointer"
-                  style={{ background: asPallet === val ? '#1a1a1a' : 'transparent', color: asPallet === val ? '#fff' : '#3c3833' }}
+                  onClick={() => { setIsBox(val as boolean); setQty(1); }}
+                  aria-pressed={isBox === val}
+                  className="flex-1 text-center py-2 rounded-[9px] cursor-pointer"
+                  style={{ background: isBox === val ? '#1a1a1a' : 'transparent', color: isBox === val ? '#fff' : '#3c3833' }}
                 >
-                  {label as string}
+                  <span className="block text-[13px] font-semibold">{label as string}</span>
+                  <span className="block text-[10px] opacity-70 mt-0.5">{sub as string}</span>
                 </button>
               ))}
             </div>
@@ -106,7 +111,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         <div className="px-4 pt-3.5">
           <div className="bg-white border border-divider rounded-[16px] p-4 flex flex-col gap-3">
             <div className="flex items-end justify-between">
-              <PriceBlock p={p} mode={effectiveMode} size="lg" />
+              <PriceBlock p={p} mode={mode} isBox={isBox} size="lg" />
             </div>
             <div className="h-px bg-divider" />
             <div className="flex items-center gap-3">
@@ -188,7 +193,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px) saturate(180%)', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex-1">
-          <div className="text-[11px] text-muted">Итого {qty} {asPallet ? 'коробок' : p.unit}</div>
+          <div className="text-[11px] text-muted">
+            Итого {isBox ? `${qty} кор.` : `${qty} ${p.unit}`}
+            {isBox && ` · ${qty * p.boxQty} ${p.unit}`}
+          </div>
           <div className="text-[18px] font-bold text-ink font-mono" style={{ letterSpacing: '-0.3px' }}>{fmt(total)}</div>
         </div>
         <button
@@ -196,7 +204,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             if (adding) return;
             setAdding(true);
             try {
-              await addToCart(p.id, qty, asPallet);
+              await addToCart(p.id, qty, isBox);
               router.push('/cart');
             } finally {
               setAdding(false);

@@ -20,10 +20,14 @@ func NewOrderHandler(orderService domain.OrderService) *OrderHandler {
 
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ContactName  string `json:"contact_name"`
-		ContactPhone string `json:"contact_phone"`
-		Address      string `json:"address"`
-		GuestEmail   string `json:"guest_email"`
+		ContactName    string `json:"contact_name"`
+		ContactPhone   string `json:"contact_phone"`
+		Address        string `json:"address"`
+		GuestEmail     string `json:"guest_email"`
+		DeliveryMethod string `json:"delivery_method"`
+		PaymentMethod  string `json:"payment_method"`
+		Comment        string `json:"comment"`
+		Company        string `json:"company"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -34,12 +38,16 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromRequest(r)
 
 	order := &domain.Order{
-		SessionID:    sessionID,
-		UserID:       userID,
-		ContactName:  req.ContactName,
-		ContactPhone: req.ContactPhone,
-		Address:      req.Address,
-		GuestEmail:   req.GuestEmail,
+		SessionID:      sessionID,
+		UserID:         userID,
+		ContactName:    req.ContactName,
+		ContactPhone:   req.ContactPhone,
+		Address:        req.Address,
+		GuestEmail:     req.GuestEmail,
+		DeliveryMethod: req.DeliveryMethod,
+		PaymentMethod:  req.PaymentMethod,
+		Comment:        req.Comment,
+		Company:        req.Company,
 	}
 
 	created, err := h.orderService.Create(r.Context(), order)

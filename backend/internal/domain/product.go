@@ -14,29 +14,30 @@ type ProductSpec struct {
 }
 
 type Product struct {
-	ID         uuid.UUID     `json:"id"`
-	SKU        string        `json:"sku"`
-	Title      string        `json:"title"`
-	Sub        string        `json:"sub"`
-	CategoryID *uuid.UUID    `json:"category_id"`
-	CatLabel   string        `json:"cat_label"`
-	Unit       string        `json:"unit"`
-	UnitDetail string        `json:"unit_detail"`
-	Price      float64       `json:"price"`
-	OldPrice   *float64      `json:"old_price"`
-	PriceBox   *float64      `json:"price_box"`
-	BoxQty     int           `json:"box_qty"`
-	Stock      int           `json:"stock"`
-	StockUnit  string        `json:"stock_unit"`
-	ETA        string        `json:"eta"`
-	Rating     float64       `json:"rating"`
-	Reviews    int           `json:"reviews"`
-	Tag        string        `json:"tag"`
-	ImageURL   string        `json:"image_url"`
-	IsActive   bool          `json:"is_active"`
-	Specs      []ProductSpec `json:"specs"`
-	CreatedAt  time.Time     `json:"created_at"`
-	UpdatedAt  time.Time     `json:"updated_at"`
+	ID                 uuid.UUID     `json:"id"`
+	SKU                string        `json:"sku"`
+	Title              string        `json:"title"`
+	Sub                string        `json:"sub"`
+	CategoryID         *uuid.UUID    `json:"category_id"`
+	CatLabel           string        `json:"cat_label"`
+	Unit               string        `json:"unit"`
+	UnitDetail         string        `json:"unit_detail"`
+	Price              float64       `json:"price"`
+	OldPrice           *float64      `json:"old_price"`
+	PriceBox           *float64      `json:"price_box"`
+	B2BDiscountPercent float64       `json:"b2b_discount_percent,omitempty"`
+	BoxQty             int           `json:"box_qty"`
+	Stock              int           `json:"stock"`
+	StockUnit          string        `json:"stock_unit"`
+	ETA                string        `json:"eta"`
+	Rating             float64       `json:"rating"`
+	Reviews            int           `json:"reviews"`
+	Tag                string        `json:"tag"`
+	ImageURL           string        `json:"image_url"`
+	IsActive           bool          `json:"is_active"`
+	Specs              []ProductSpec `json:"specs"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
 }
 
 type ProductFilter struct {

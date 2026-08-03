@@ -20,13 +20,13 @@ func NewPostgresOrderRepo(pool *pgxpool.Pool) domain.OrderRepository {
 }
 
 const orderCols = `id, user_id, session_id, status, status_kind, items_count, total, eta,
-	contact_name, contact_phone, address, COALESCE(guest_email, ''), created_at, updated_at`
+	contact_name, contact_phone, address, COALESCE(guest_email, ''), delivery_method, payment_method, comment, company, created_at, updated_at`
 
 func (r *postgresOrderRepo) scanOrder(rows pgx.Rows) (domain.Order, error) {
 	var o domain.Order
 	err := rows.Scan(
 		&o.ID, &o.UserID, &o.SessionID, &o.Status, &o.StatusKind, &o.ItemsCount, &o.Total, &o.ETA,
-		&o.ContactName, &o.ContactPhone, &o.Address, &o.GuestEmail, &o.CreatedAt, &o.UpdatedAt,
+		&o.ContactName, &o.ContactPhone, &o.Address, &o.GuestEmail, &o.DeliveryMethod, &o.PaymentMethod, &o.Comment, &o.Company, &o.CreatedAt, &o.UpdatedAt,
 	)
 	return o, err
 }
@@ -40,10 +40,10 @@ func (r *postgresOrderRepo) Create(ctx context.Context, o *domain.Order) error {
 	o.UpdatedAt = now
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO orders(id, user_id, session_id, status, status_kind, items_count, total, eta,
-		contact_name, contact_phone, address, guest_email, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+		contact_name, contact_phone, address, guest_email, delivery_method, payment_method, comment, company, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
 		o.ID, o.UserID, o.SessionID, o.Status, o.StatusKind, o.ItemsCount, o.Total, o.ETA,
-		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.CreatedAt, o.UpdatedAt,
+		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.DeliveryMethod, o.PaymentMethod, o.Comment, o.Company, o.CreatedAt, o.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("postgres.OrderRepo.Create: %w", err)
@@ -62,6 +62,51 @@ func (r *postgresOrderRepo) CreateItems(ctx context.Context, items []domain.Orde
 		if err != nil {
 			return fmt.Errorf("postgres.OrderRepo.CreateItems: %w", err)
 		}
+	}
+	return nil
+}
+
+// CreateCheckout atomically reserves stock, saves the order and clears its cart.
+func (r *postgresOrderRepo) CreateCheckout(ctx context.Context, o *domain.Order, items []domain.OrderItem, stockByProduct map[uuid.UUID]int) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("postgres.OrderRepo.CreateCheckout begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for productID, qty := range stockByProduct {
+		result, err := tx.Exec(ctx, `UPDATE products SET stock = stock - $1, updated_at = NOW() WHERE id = $2 AND is_active AND stock >= $1`, qty, productID)
+		if err != nil {
+			return fmt.Errorf("postgres.OrderRepo.CreateCheckout reserve stock: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return domain.ErrValidation{Field: "cart", Msg: "один из товаров закончился или больше недоступен"}
+		}
+	}
+
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO orders(id, user_id, session_id, status, status_kind, items_count, total, eta,
+		contact_name, contact_phone, address, guest_email, delivery_method, payment_method, comment, company, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+		o.ID, o.UserID, o.SessionID, o.Status, o.StatusKind, o.ItemsCount, o.Total, o.ETA,
+		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.DeliveryMethod, o.PaymentMethod, o.Comment, o.Company, o.CreatedAt, o.UpdatedAt,
+	); err != nil {
+		return fmt.Errorf("postgres.OrderRepo.CreateCheckout order: %w", err)
+	}
+	for _, item := range items {
+		if _, err := tx.Exec(ctx, `INSERT INTO order_items(id, order_id, product_id, title, sku, unit, price, qty, total) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, item.ID, item.OrderID, item.ProductID, item.Title, item.SKU, item.Unit, item.Price, item.Qty, item.Total); err != nil {
+			return fmt.Errorf("postgres.OrderRepo.CreateCheckout item: %w", err)
+		}
+	}
+	if o.UserID != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM cart_items WHERE user_id = $1`, *o.UserID); err != nil {
+			return fmt.Errorf("postgres.OrderRepo.CreateCheckout clear user cart: %w", err)
+		}
+	} else if _, err := tx.Exec(ctx, `DELETE FROM cart_items WHERE session_id = $1`, o.SessionID); err != nil {
+		return fmt.Errorf("postgres.OrderRepo.CreateCheckout clear session cart: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("postgres.OrderRepo.CreateCheckout commit: %w", err)
 	}
 	return nil
 }
@@ -129,6 +174,11 @@ func (r *postgresOrderRepo) listOrders(ctx context.Context, query string, arg an
 		if err != nil {
 			return nil, fmt.Errorf("postgres.OrderRepo list scan: %w", err)
 		}
+		items, err := r.GetItems(ctx, o.ID)
+		if err != nil {
+			return nil, fmt.Errorf("postgres.OrderRepo list items: %w", err)
+		}
+		o.Items = items
 		orders = append(orders, o)
 	}
 	return orders, rows.Err()
@@ -169,6 +219,11 @@ func (r *postgresOrderRepo) ListAll(ctx context.Context, limit, offset int) ([]d
 		if err != nil {
 			return nil, 0, fmt.Errorf("postgres.OrderRepo.ListAll scan: %w", err)
 		}
+		items, err := r.GetItems(ctx, o.ID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("postgres.OrderRepo.ListAll items: %w", err)
+		}
+		o.Items = items
 		orders = append(orders, o)
 	}
 	return orders, total, rows.Err()

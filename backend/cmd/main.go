@@ -64,6 +64,7 @@ func main() {
 	cartRepo := postgres.NewPostgresCartRepo(pool)
 	orderRepo := postgres.NewPostgresOrderRepo(pool)
 	markdownRepo := postgres.NewPostgresMarkdownRepo(pool)
+	settingsRepo := postgres.NewPostgresSettingsRepo(pool)
 
 	// --- Infrastructure ---
 	hasher := crypto.BcryptHasher{}
@@ -84,7 +85,7 @@ func main() {
 	categorySvc := service.NewCategoryService(categoryRepo)
 	productSvc := service.NewProductService(productRepo)
 	cartSvc := service.NewCartService(cartRepo, productRepo, markdownRepo)
-	orderSvc := service.NewOrderService(orderRepo, userRepo, cartRepo, productRepo, producer)
+	orderSvc := service.NewOrderService(orderRepo, userRepo, cartRepo, productRepo, producer, settingsRepo)
 	markdownSvc := service.NewMarkdownService(markdownRepo)
 
 	// --- Telegram bot (optional) ---
@@ -100,11 +101,11 @@ func main() {
 
 	// --- Handlers ---
 	authHandler := handler.NewAuthHandler(userSvc)
-	catalogHandler := handler.NewCatalogHandler(categorySvc, productSvc)
+	catalogHandler := handler.NewCatalogHandler(categorySvc, productSvc, settingsRepo)
 	cartHandler := handler.NewCartHandler(cartSvc)
 	orderHandler := handler.NewOrderHandler(orderSvc)
 	profileHandler := handler.NewProfileHandler(userSvc)
-	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc)
+	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc, settingsRepo)
 	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
 	markdownHandler := handler.NewMarkdownHandler(markdownSvc)
 
