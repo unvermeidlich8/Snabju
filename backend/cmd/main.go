@@ -14,6 +14,7 @@ import (
 
 	"Snabju/backend/internal/crypto"
 	"Snabju/backend/internal/mailer"
+	push "Snabju/backend/internal/push"
 	appredis "Snabju/backend/internal/redis"
 	"Snabju/backend/internal/redisstream"
 	"Snabju/backend/internal/repository/postgres"
@@ -97,7 +98,11 @@ func main() {
 	}
 
 	// --- Redis Streams consumers ---
-	notificationConsumer := redisstream.NewNotificationConsumer(redisClient, m, tg, cfg.adminEmail)
+	var pushSender *push.Sender
+	if cfg.vapidPublicKey != "" && cfg.vapidPrivateKey != "" && cfg.vapidSubject != "" {
+		pushSender = push.New(pushRepo, cfg.vapidPublicKey, cfg.vapidPrivateKey, cfg.vapidSubject)
+	}
+	notificationConsumer := redisstream.NewNotificationConsumer(redisClient, m, tg, cfg.adminEmail, pushSender)
 	go notificationConsumer.Run(context.Background())
 
 	// --- Handlers ---
@@ -177,6 +182,9 @@ type config struct {
 	telegramToken       string
 	telegramAdminChatID string
 	adminEmail          string
+	vapidPublicKey      string
+	vapidPrivateKey     string
+	vapidSubject        string
 }
 
 func loadConfig() config {
@@ -198,6 +206,9 @@ func loadConfig() config {
 		telegramToken:       getEnv("TELEGRAM_BOT_TOKEN", ""),
 		telegramAdminChatID: getEnv("TELEGRAM_ADMIN_CHAT_ID", ""),
 		adminEmail:          getEnv("ADMIN_EMAIL", ""),
+		vapidPublicKey:      getEnv("VAPID_PUBLIC_KEY", ""),
+		vapidPrivateKey:     getEnv("VAPID_PRIVATE_KEY", ""),
+		vapidSubject:        getEnv("VAPID_SUBJECT", ""),
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")

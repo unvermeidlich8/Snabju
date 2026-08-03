@@ -3,6 +3,7 @@ package redisstream
 import (
 	"Snabju/backend/internal/domain"
 	"Snabju/backend/internal/mailer"
+	push "Snabju/backend/internal/push"
 	"Snabju/backend/internal/telegram"
 	"context"
 	"encoding/json"
@@ -24,10 +25,11 @@ type NotificationConsumer struct {
 	mailer     mailer.Sender
 	telegram   telegram.Notifier
 	adminEmail string
+	push       *push.Sender
 }
 
-func NewNotificationConsumer(client *redis.Client, m mailer.Sender, tg telegram.Notifier, adminEmail string) *NotificationConsumer {
-	return &NotificationConsumer{client: client, mailer: m, telegram: tg, adminEmail: adminEmail}
+func NewNotificationConsumer(client *redis.Client, m mailer.Sender, tg telegram.Notifier, adminEmail string, p *push.Sender) *NotificationConsumer {
+	return &NotificationConsumer{client: client, mailer: m, telegram: tg, adminEmail: adminEmail, push: p}
 }
 
 func (c *NotificationConsumer) Run(ctx context.Context) {
@@ -131,6 +133,11 @@ func (c *NotificationConsumer) handle(ctx context.Context, event domain.Event) e
 		if c.adminEmail != "" {
 			_ = c.mailer.SendAdminRegistrationEmail(ctx, c.adminEmail, p)
 		}
+		if c.push != nil {
+			if err := c.push.Send(ctx, "Новая регистрация", "Зарегистрировался: "+p.Name); err != nil {
+				slog.Error("notification consumer: push registration", "err", err)
+			}
+		}
 		if c.telegram != nil {
 			if err := c.telegram.SendRegistrationNotification(ctx, p); err != nil {
 				slog.Error("notification consumer: send registration telegram", "err", err)
@@ -147,6 +154,11 @@ func (c *NotificationConsumer) handle(ctx context.Context, event domain.Event) e
 		}
 		if c.adminEmail != "" {
 			_ = c.mailer.SendAdminOrderEmail(ctx, c.adminEmail, p)
+		}
+		if c.push != nil {
+			if err := c.push.Send(ctx, "Новый заказ", p.ContactName+" · заказ принят в обработку"); err != nil {
+				slog.Error("notification consumer: push order", "err", err)
+			}
 		}
 		if c.telegram != nil {
 			if err := c.telegram.SendOrderNotification(ctx, p); err != nil {

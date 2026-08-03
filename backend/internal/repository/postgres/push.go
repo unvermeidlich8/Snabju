@@ -18,3 +18,19 @@ func (r *pushRepo) Upsert(ctx context.Context, userID uuid.UUID, s domain.PushSu
 	}
 	return nil
 }
+func (r *pushRepo) List(ctx context.Context) ([]domain.PushSubscription, error) {
+	rows, err := r.pool.Query(ctx, `SELECT endpoint, p256dh, auth FROM push_subscriptions`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []domain.PushSubscription
+	for rows.Next() {
+		var s domain.PushSubscription
+		if err := rows.Scan(&s.Endpoint, &s.Keys.P256dh, &s.Keys.Auth); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, rows.Err()
+}

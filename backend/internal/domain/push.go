@@ -14,4 +14,5 @@ type PushSubscription struct {
 }
 type PushRepository interface {
 	Upsert(context.Context, uuid.UUID, PushSubscription) error
+	List(context.Context) ([]PushSubscription, error)
 }
