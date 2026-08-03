@@ -16,10 +16,29 @@ type AdminHandler struct {
 	productService  domain.ProductService
 	orderService    domain.OrderService
 	settingsRepo    domain.SettingsRepository
+	pushRepo        domain.PushRepository
 }
 
-func NewAdminHandler(categoryService domain.CategoryService, productService domain.ProductService, orderService domain.OrderService, settingsRepo domain.SettingsRepository) *AdminHandler {
-	return &AdminHandler{categoryService: categoryService, productService: productService, orderService: orderService, settingsRepo: settingsRepo}
+func NewAdminHandler(categoryService domain.CategoryService, productService domain.ProductService, orderService domain.OrderService, settingsRepo domain.SettingsRepository, pushRepo domain.PushRepository) *AdminHandler {
+	return &AdminHandler{categoryService: categoryService, productService: productService, orderService: orderService, settingsRepo: settingsRepo, pushRepo: pushRepo}
+}
+
+func (h *AdminHandler) SubscribePush(w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromRequest(r)
+	if userID == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	var subscription domain.PushSubscription
+	if err := json.NewDecoder(r.Body).Decode(&subscription); err != nil || subscription.Endpoint == "" || subscription.Keys.P256dh == "" || subscription.Keys.Auth == "" {
+		writeError(w, http.StatusBadRequest, "некорректная push-подписка")
+		return
+	}
+	if err := h.pushRepo.Upsert(r.Context(), *userID, subscription); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AdminHandler) GetB2BDiscount(w http.ResponseWriter, r *http.Request) {

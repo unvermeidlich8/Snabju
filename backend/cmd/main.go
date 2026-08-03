@@ -65,6 +65,7 @@ func main() {
 	orderRepo := postgres.NewPostgresOrderRepo(pool)
 	markdownRepo := postgres.NewPostgresMarkdownRepo(pool)
 	settingsRepo := postgres.NewPostgresSettingsRepo(pool)
+	pushRepo := postgres.NewPushRepo(pool)
 
 	// --- Infrastructure ---
 	hasher := crypto.BcryptHasher{}
@@ -96,7 +97,7 @@ func main() {
 	}
 
 	// --- Redis Streams consumers ---
-	notificationConsumer := redisstream.NewNotificationConsumer(redisClient, m, tg)
+	notificationConsumer := redisstream.NewNotificationConsumer(redisClient, m, tg, cfg.adminEmail)
 	go notificationConsumer.Run(context.Background())
 
 	// --- Handlers ---
@@ -105,7 +106,7 @@ func main() {
 	cartHandler := handler.NewCartHandler(cartSvc)
 	orderHandler := handler.NewOrderHandler(orderSvc)
 	profileHandler := handler.NewProfileHandler(userSvc)
-	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc, settingsRepo)
+	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc, settingsRepo, pushRepo)
 	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
 	markdownHandler := handler.NewMarkdownHandler(markdownSvc)
 
@@ -175,6 +176,7 @@ type config struct {
 	publicBaseURL       string
 	telegramToken       string
 	telegramAdminChatID string
+	adminEmail          string
 }
 
 func loadConfig() config {
@@ -195,6 +197,7 @@ func loadConfig() config {
 		publicBaseURL:       getEnv("PUBLIC_BASE_URL", "http://localhost:8080"),
 		telegramToken:       getEnv("TELEGRAM_BOT_TOKEN", ""),
 		telegramAdminChatID: getEnv("TELEGRAM_ADMIN_CHAT_ID", ""),
+		adminEmail:          getEnv("ADMIN_EMAIL", ""),
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")

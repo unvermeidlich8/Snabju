@@ -135,6 +135,7 @@ function mapUser(r: Record<string, any>): User {
 // --- API ---
 
 export const api = {
+  async subscribePush(subscription: PushSubscription): Promise<void> { await req<void>('/api/v1/admin/push-subscriptions', { method: 'POST', body: JSON.stringify(subscription) }); },
   async getCategories(): Promise<Category[]> {
     const data = await req<{ items: Record<string, any>[] }>('/api/v1/categories');
     const cats = (data.items ?? []).map(mapCategory);

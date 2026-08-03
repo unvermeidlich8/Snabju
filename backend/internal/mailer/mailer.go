@@ -11,6 +11,16 @@ import (
 type Sender interface {
 	SendRegistrationEmail(ctx context.Context, p domain.UserRegisteredPayload) error
 	SendOrderConfirmationEmail(ctx context.Context, p domain.OrderConfirmedPayload) error
+	SendAdminRegistrationEmail(ctx context.Context, to string, p domain.UserRegisteredPayload) error
+	SendAdminOrderEmail(ctx context.Context, to string, p domain.OrderConfirmedPayload) error
+}
+
+func (m *Mailer) SendAdminRegistrationEmail(ctx context.Context, to string, p domain.UserRegisteredPayload) error {
+	return m.send(ctx, to, "Новая регистрация — Snabju", fmt.Sprintf("<h2>Новая регистрация</h2><p><strong>%s</strong><br>%s<br>%v</p>", p.Name, p.Phone, p.Email))
+}
+
+func (m *Mailer) SendAdminOrderEmail(ctx context.Context, to string, p domain.OrderConfirmedPayload) error {
+	return m.send(ctx, to, "Новый заказ — Snabju", fmt.Sprintf("<h2>Новый заказ #%s</h2><p><strong>%s</strong><br>%s<br>%s</p><p>Сумма: <strong>%.2f ₽</strong></p>", p.OrderID, p.ContactName, p.ContactPhone, p.Address, p.Total))
 }
 
 type TLSPolicy string

@@ -69,6 +69,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
     restart: unless-stopped
     depends_on:
       - backend

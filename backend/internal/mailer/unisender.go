@@ -16,6 +16,14 @@ type UniSenderMailer struct {
 	fromEmail string
 }
 
+func (u *UniSenderMailer) SendAdminRegistrationEmail(ctx context.Context, to string, p domain.UserRegisteredPayload) error {
+	return u.send(ctx, to, "Новая регистрация — Snabju", fmt.Sprintf("<h2>Новая регистрация</h2><p><strong>%s</strong><br>%s<br>%v</p>", p.Name, p.Phone, p.Email))
+}
+
+func (u *UniSenderMailer) SendAdminOrderEmail(ctx context.Context, to string, p domain.OrderConfirmedPayload) error {
+	return u.send(ctx, to, "Новый заказ — Snabju", fmt.Sprintf("<h2>Новый заказ #%s</h2><p><strong>%s</strong><br>%s<br>%s</p><p>Сумма: <strong>%.2f ₽</strong></p>", p.OrderID, p.ContactName, p.ContactPhone, p.Address, p.Total))
+}
+
 func NewUniSender(apiKey, _ /* listID */, fromName, fromEmail string) *UniSenderMailer {
 	return &UniSenderMailer{
 		apiKey:    apiKey,

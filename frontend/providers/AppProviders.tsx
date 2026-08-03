@@ -6,6 +6,7 @@ import { CartProvider } from './CartProvider';
 import { ModeProvider } from './ModeProvider';
 import { TabBar } from '@/components/layout/TabBar';
 import { ModeSelectModal } from '@/components/ui/ModeSelectModal';
+import { ServiceWorker } from '@/components/pwa/ServiceWorker';
 
 const TAB_PATHS = ['/', '/catalog', '/markdown', '/cart', '/account'];
 
@@ -15,6 +16,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <ModeProvider>
+	  <ServiceWorker />
       <AuthProvider>
         <CartProvider>
           <div className="min-h-screen bg-brand">

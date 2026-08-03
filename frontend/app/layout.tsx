@@ -20,6 +20,8 @@ const jbmono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'snabju · интернет-магазин стройматериалов',
   description: 'Утеплители · пены · герметики — Москва и МО',
+  applicationName: 'Snabju',
+  appleWebApp: { capable: true, title: 'Snabju' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

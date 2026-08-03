@@ -76,6 +76,7 @@ func NewRouter(
 			r.Get("/admin/brands", admin.ListBrands)
 			r.Get("/admin/settings/b2b-discount", admin.GetB2BDiscount)
 			r.Patch("/admin/settings/b2b-discount", admin.UpdateB2BDiscount)
+			r.Post("/admin/push-subscriptions", admin.SubscribePush)
 			r.Get("/admin/products", admin.ListProducts)
 			r.Post("/admin/products", admin.CreateProduct)
 			r.Patch("/admin/products/{id}", admin.UpdateProduct)

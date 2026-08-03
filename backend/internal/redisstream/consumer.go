@@ -20,13 +20,14 @@ const (
 )
 
 type NotificationConsumer struct {
-	client   *redis.Client
-	mailer   mailer.Sender
-	telegram telegram.Notifier
+	client     *redis.Client
+	mailer     mailer.Sender
+	telegram   telegram.Notifier
+	adminEmail string
 }
 
-func NewNotificationConsumer(client *redis.Client, m mailer.Sender, tg telegram.Notifier) *NotificationConsumer {
-	return &NotificationConsumer{client: client, mailer: m, telegram: tg}
+func NewNotificationConsumer(client *redis.Client, m mailer.Sender, tg telegram.Notifier, adminEmail string) *NotificationConsumer {
+	return &NotificationConsumer{client: client, mailer: m, telegram: tg, adminEmail: adminEmail}
 }
 
 func (c *NotificationConsumer) Run(ctx context.Context) {
@@ -127,6 +128,9 @@ func (c *NotificationConsumer) handle(ctx context.Context, event domain.Event) e
 		if err := c.mailer.SendRegistrationEmail(ctx, p); err != nil {
 			slog.Error("notification consumer: send registration email", "err", err)
 		}
+		if c.adminEmail != "" {
+			_ = c.mailer.SendAdminRegistrationEmail(ctx, c.adminEmail, p)
+		}
 		if c.telegram != nil {
 			if err := c.telegram.SendRegistrationNotification(ctx, p); err != nil {
 				slog.Error("notification consumer: send registration telegram", "err", err)
@@ -140,6 +144,9 @@ func (c *NotificationConsumer) handle(ctx context.Context, event domain.Event) e
 		}
 		if err := c.mailer.SendOrderConfirmationEmail(ctx, p); err != nil {
 			slog.Error("notification consumer: send order email", "err", err)
+		}
+		if c.adminEmail != "" {
+			_ = c.mailer.SendAdminOrderEmail(ctx, c.adminEmail, p)
 		}
 		if c.telegram != nil {
 			if err := c.telegram.SendOrderNotification(ctx, p); err != nil {
