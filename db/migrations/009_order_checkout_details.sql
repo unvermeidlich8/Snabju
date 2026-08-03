@@ -7,7 +7,3 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS comment TEXT NOT NULL DEFAULT '';
 ALTER TABLE orders DROP COLUMN IF EXISTS comment;
 ALTER TABLE orders DROP COLUMN IF EXISTS payment_method;
 ALTER TABLE orders DROP COLUMN IF EXISTS delivery_method;
--- +goose Down
-ALTER TABLE orders DROP COLUMN IF EXISTS comment;
-ALTER TABLE orders DROP COLUMN IF EXISTS payment_method;
-ALTER TABLE orders DROP COLUMN IF EXISTS delivery_method;
