@@ -7,6 +7,7 @@ import (
 	"github.com/SherClockHolmes/webpush-go"
 	"io"
 	"log/slog"
+	"strings"
 )
 
 type Sender struct {
@@ -15,7 +16,12 @@ type Sender struct {
 }
 
 func New(r domain.PushRepository, public, private, subject string) *Sender {
-	return &Sender{r, public, private, subject}
+	return &Sender{
+		repo:    r,
+		public:  public,
+		private: private,
+		subject: strings.TrimPrefix(subject, "mailto:"),
+	}
 }
 func (s *Sender) Send(ctx context.Context, title, body string) error {
 	subs, e := s.repo.List(ctx)
