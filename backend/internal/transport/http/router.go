@@ -21,6 +21,7 @@ func NewRouter(
 	admin *handler.AdminHandler,
 	upload *handler.UploadHandler,
 	markdown *handler.MarkdownHandler,
+	yandexMarket *handler.YandexMarketHandler,
 	sessionStore domain.SessionStore,
 	userRepo domain.UserRepository,
 	uploadsDir string,
@@ -42,6 +43,7 @@ func NewRouter(
 	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(uploadsDir))))
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/yandex-market.yml", yandexMarket.Feed)
 		r.Post("/auth/register", auth.Register)
 		r.Post("/auth/login", auth.Login)
 		r.Post("/auth/logout", auth.Logout)
@@ -82,6 +84,7 @@ func NewRouter(
 			r.Patch("/admin/products/{id}", admin.UpdateProduct)
 			r.Delete("/admin/products/{id}", admin.DeleteProduct)
 			r.Get("/admin/orders", admin.ListOrders)
+			r.Get("/admin/users", admin.ListUsers)
 			r.Patch("/admin/orders/{id}/status", admin.UpdateOrderStatus)
 		})
 	})

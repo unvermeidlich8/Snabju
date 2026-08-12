@@ -111,9 +111,10 @@ func main() {
 	cartHandler := handler.NewCartHandler(cartSvc)
 	orderHandler := handler.NewOrderHandler(orderSvc)
 	profileHandler := handler.NewProfileHandler(userSvc)
-	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc, settingsRepo, pushRepo)
+	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc, settingsRepo, pushRepo, userRepo)
 	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
 	markdownHandler := handler.NewMarkdownHandler(markdownSvc)
+	yandexMarketHandler := handler.NewYandexMarketHandler(productSvc, cfg.publicBaseURL)
 
 	// --- Router ---
 	router := server.NewRouter(
@@ -125,6 +126,7 @@ func main() {
 		adminHandler,
 		uploadHandler,
 		markdownHandler,
+		yandexMarketHandler,
 		sessionStore,
 		userRepo,
 		cfg.uploadsDir,

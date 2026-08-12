@@ -1,4 +1,4 @@
-import type { Category, Product, ProductSpec, CartItem, Order, OrderItem, User, CatIcon, ProductTag, MarkdownItem } from './types';
+import type { Category, Product, ProductSpec, CartItem, Order, OrderItem, User, AdminUser, CatIcon, ProductTag, MarkdownItem } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -129,6 +129,15 @@ function mapUser(r: Record<string, any>): User {
     isAdmin: r.is_admin ?? false,
     company: r.company ?? null,
     createdAt: r.created_at ?? '',
+  };
+}
+
+function mapAdminUser(r: Record<string, any>): AdminUser {
+  return {
+    id: r.id ?? '', phone: r.phone ?? null, email: r.email ?? null,
+    name: r.name ?? '', company: r.company ?? '', createdAt: r.created_at ?? '',
+    ordersCount: Number(r.orders_count ?? 0), ordersTotal: Number(r.orders_total ?? 0),
+    lastOrderAt: r.last_order_at ?? null, lastOrderStatus: r.last_order_status ?? '',
   };
 }
 
@@ -281,6 +290,15 @@ export const api = {
     if (params.offset != null) q.set('offset', String(params.offset));
     const data = await req<{ items: Record<string, any>[]; total: number }>(`/api/v1/admin/orders?${q}`);
     return { items: (data.items ?? []).map(mapOrder), total: data.total ?? 0 };
+  },
+
+  async adminListUsers(params: { q?: string; limit?: number; offset?: number } = {}): Promise<{ items: AdminUser[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.q) q.set('q', params.q);
+    if (params.limit != null) q.set('limit', String(params.limit));
+    if (params.offset != null) q.set('offset', String(params.offset));
+    const data = await req<{ items: Record<string, any>[]; total: number }>(`/api/v1/admin/users?${q}`);
+    return { items: (data.items ?? []).map(mapAdminUser), total: data.total ?? 0 };
   },
 
   async adminUpdateOrderStatus(id: string, statusKind: string, status: string): Promise<Order> {

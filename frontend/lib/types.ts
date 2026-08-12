@@ -107,6 +107,19 @@ export interface User {
   createdAt: string;
 }
 
+export interface AdminUser {
+  id: string;
+  phone: string | null;
+  email: string | null;
+  name: string;
+  company: string;
+  createdAt: string;
+  ordersCount: number;
+  ordersTotal: number;
+  lastOrderAt: string | null;
+  lastOrderStatus: string;
+}
+
 export interface Promo {
   id: string;
   title: string;

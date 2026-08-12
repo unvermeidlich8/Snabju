@@ -17,10 +17,29 @@ type AdminHandler struct {
 	orderService    domain.OrderService
 	settingsRepo    domain.SettingsRepository
 	pushRepo        domain.PushRepository
+	userRepo        domain.UserRepository
 }
 
-func NewAdminHandler(categoryService domain.CategoryService, productService domain.ProductService, orderService domain.OrderService, settingsRepo domain.SettingsRepository, pushRepo domain.PushRepository) *AdminHandler {
-	return &AdminHandler{categoryService: categoryService, productService: productService, orderService: orderService, settingsRepo: settingsRepo, pushRepo: pushRepo}
+func NewAdminHandler(categoryService domain.CategoryService, productService domain.ProductService, orderService domain.OrderService, settingsRepo domain.SettingsRepository, pushRepo domain.PushRepository, userRepo domain.UserRepository) *AdminHandler {
+	return &AdminHandler{categoryService: categoryService, productService: productService, orderService: orderService, settingsRepo: settingsRepo, pushRepo: pushRepo, userRepo: userRepo}
+}
+
+// GET /api/v1/admin/users
+func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	users, total, err := h.userRepo.ListForAdmin(r.Context(), r.URL.Query().Get("q"), limit, offset)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": users, "total": total})
 }
 
 func (h *AdminHandler) SubscribePush(w http.ResponseWriter, r *http.Request) {

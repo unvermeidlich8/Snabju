@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   description: 'Утеплители · пены · герметики — Москва и МО',
   applicationName: 'Snabju',
   appleWebApp: { capable: true, title: 'Snabju' },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

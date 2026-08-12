@@ -26,12 +26,27 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+// AdminUser is the customer card shown in the admin panel.
+type AdminUser struct {
+	ID              uuid.UUID  `json:"id"`
+	Phone           *string    `json:"phone"`
+	Email           *string    `json:"email"`
+	Name            string     `json:"name"`
+	Company         string     `json:"company"`
+	CreatedAt       time.Time  `json:"created_at"`
+	OrdersCount     int        `json:"orders_count"`
+	OrdersTotal     float64    `json:"orders_total"`
+	LastOrderAt     *time.Time `json:"last_order_at,omitempty"`
+	LastOrderStatus string     `json:"last_order_status,omitempty"`
+}
+
 type UserRepository interface {
 	Create(ctx context.Context, u *User) error
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetByPhone(ctx context.Context, phone string) (*User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Update(ctx context.Context, u *User) error
+	ListForAdmin(ctx context.Context, query string, limit, offset int) ([]AdminUser, int, error)
 }
 
 type UserService interface {

@@ -119,3 +119,45 @@ func (r *postgresUserRepo) Update(ctx context.Context, u *domain.User) error {
 
 	return nil
 }
+
+func (r *postgresUserRepo) ListForAdmin(ctx context.Context, query string, limit, offset int) ([]domain.AdminUser, int, error) {
+	pattern := "%" + query + "%"
+	const where = `WHERE NOT u.is_admin AND (
+		$1 = '' OR u.name ILIKE $2 OR u.company ILIKE $2 OR u.phone ILIKE $2 OR u.email ILIKE $2
+	)`
+
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM users u `+where, query, pattern).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("postgres.ListForAdmin count: %w", err)
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT u.id, u.phone, u.email, u.name, u.company, u.created_at,
+			COUNT(o.id)::int AS orders_count,
+			COALESCE(SUM(o.total) FILTER (WHERE o.status_kind <> 'cancelled'), 0) AS orders_total,
+			MAX(o.created_at) AS last_order_at,
+			COALESCE((ARRAY_AGG(o.status ORDER BY o.created_at DESC))[1], '') AS last_order_status
+		FROM users u
+		LEFT JOIN orders o ON o.user_id = u.id
+		`+where+`
+		GROUP BY u.id
+		ORDER BY MAX(o.created_at) DESC NULLS LAST, u.created_at DESC
+		LIMIT $3 OFFSET $4`, query, pattern, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("postgres.ListForAdmin: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]domain.AdminUser, 0)
+	for rows.Next() {
+		var user domain.AdminUser
+		if err := rows.Scan(&user.ID, &user.Phone, &user.Email, &user.Name, &user.Company, &user.CreatedAt, &user.OrdersCount, &user.OrdersTotal, &user.LastOrderAt, &user.LastOrderStatus); err != nil {
+			return nil, 0, fmt.Errorf("postgres.ListForAdmin scan: %w", err)
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("postgres.ListForAdmin rows: %w", err)
+	}
+	return users, total, nil
+}
