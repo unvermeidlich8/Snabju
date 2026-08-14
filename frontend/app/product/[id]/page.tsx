@@ -70,7 +70,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       <div className="pb-28">
         {/* Hero image */}
         <div className="pt-14 relative">
-          <ProductImage size="lg" tag={p.tag} swatch={p.swatch} imageUrl={p.imageUrl} />
+          <ProductImage tag={p.tag} swatch={p.swatch} imageUrl={p.imageUrl} presentation="hero" />
         </div>
 
         {/* Title block */}

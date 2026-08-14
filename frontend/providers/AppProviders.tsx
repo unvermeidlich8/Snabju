@@ -8,7 +8,7 @@ import { TabBar } from '@/components/layout/TabBar';
 import { ModeSelectModal } from '@/components/ui/ModeSelectModal';
 import { ServiceWorker } from '@/components/pwa/ServiceWorker';
 
-const TAB_PATHS = ['/', '/catalog', '/markdown', '/cart', '/account'];
+const TAB_PATHS = ['/', '/catalog', '/markdown', '/about', '/cart', '/account'];
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

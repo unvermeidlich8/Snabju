@@ -3,18 +3,23 @@ interface ProductImageProps {
   tag?: string | null;
   size?: 'sm' | 'md' | 'lg';
   imageUrl?: string;
+  presentation?: 'card' | 'hero';
 }
 
-export function ProductImage({ swatch = '#e8e3d8', tag, size = 'md', imageUrl }: ProductImageProps) {
-  const h = size === 'sm' ? 92 : size === 'lg' ? 220 : 132;
+import { readImageCrop } from '@/lib/imageCrop';
+
+export function ProductImage({ tag, imageUrl, presentation = 'card' }: ProductImageProps) {
+  const crop = readImageCrop(imageUrl);
+  const isHero = presentation === 'hero';
+  const shouldContain = isHero || crop.scale <= 1;
 
   return (
     <div
       className="relative w-full overflow-hidden"
       style={{
-        height: h,
+        aspectRatio: isHero ? '4 / 3' : '1 / 1',
         borderRadius: 12,
-        background: swatch,
+        background: 'transparent',
         boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)',
       }}
     >
@@ -24,11 +29,12 @@ export function ProductImage({ swatch = '#e8e3d8', tag, size = 'md', imageUrl }:
           style={{ backgroundImage: 'repeating-linear-gradient(135deg, transparent 0 8px, rgba(0,0,0,0.04) 8px 9px)' }}
         />
       )}
-      {imageUrl && (
+      {crop.src && (
         <img
-          src={imageUrl}
+          src={crop.src}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full ${shouldContain ? 'object-contain' : 'object-cover'}`}
+          style={{ transform: `translate(${crop.offsetX}%, ${crop.offsetY}%) scale(${crop.scale})` }}
         />
       )}
       {tag && (

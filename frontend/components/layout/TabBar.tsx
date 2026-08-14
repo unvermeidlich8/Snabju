@@ -8,6 +8,7 @@ const tabs = [
   { id: 'home',     href: '/',          label: 'Главная', icon: 'home' },
   { id: 'catalog',  href: '/catalog',   label: 'Каталог', icon: 'cat' },
   { id: 'markdown', href: '/markdown',  label: 'Уценка',  icon: 'tag' },
+  { id: 'about',    href: '/about',     label: 'О нас',   icon: 'info' },
   { id: 'cart',     href: '/cart',      label: 'Корзина', icon: 'cart' },
   { id: 'account',  href: '/account',   label: 'Профиль', icon: 'user' },
 ];
@@ -18,6 +19,7 @@ function TabIcon({ k, on }: { k: string; on: boolean }) {
   if (k === 'home') return <svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 10l8-7 8 7v9a1 1 0 01-1 1h-4v-7H8v7H4a1 1 0 01-1-1z" {...sw}/></svg>;
   if (k === 'cat')  return <svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="3" width="7" height="7" rx="1.2" {...sw}/><rect x="12" y="3" width="7" height="7" rx="1.2" {...sw}/><rect x="3" y="12" width="7" height="7" rx="1.2" {...sw}/><rect x="12" y="12" width="7" height="7" rx="1.2" {...sw}/></svg>;
   if (k === 'cart') return <svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 4h2l2 11h11l2-8H6" {...sw}/><circle cx="9" cy="19" r="1.5" {...sw}/><circle cx="17" cy="19" r="1.5" {...sw}/></svg>;
+  if (k === 'info') return <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8.5" {...sw}/><path d="M11 10v5" {...sw}/><circle cx="11" cy="7" r="1" fill={c}/></svg>;
   if (k === 'tag')  {
     const bg = on ? '#1a1a1a' : '#ff6a13';
     return (

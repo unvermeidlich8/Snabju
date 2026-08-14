@@ -155,7 +155,7 @@ function ProfileView() {
     : [[String(orders.length), 'Заказов'], ['0', 'Бонусов'], ['0', 'Любимых']];
 
   const menuItems: [string, string | null][] = [
-    ['Поддержка', 'WhatsApp · Telegram'],
+    ['Поддержка', 'WhatsApp'],
     ['Выйти',     null],
   ];
 
@@ -251,22 +251,46 @@ function ProfileView() {
 
       {/* Menu */}
       <div className="px-4 pt-6 flex flex-col">
-        {menuItems.map(([label, sub], i, arr) => (
+        {menuItems.map(([label, sub], i, arr) => {
+          const style = {
+            borderTop: '1px solid #e7e3da',
+            borderLeft: '1px solid #e7e3da',
+            borderRight: '1px solid #e7e3da',
+            borderBottom: i === arr.length - 1 ? '1px solid #e7e3da' : 'none',
+            borderTopLeftRadius: i === 0 ? 14 : 0,
+            borderTopRightRadius: i === 0 ? 14 : 0,
+            borderBottomLeftRadius: i === arr.length - 1 ? 14 : 0,
+            borderBottomRightRadius: i === arr.length - 1 ? 14 : 0,
+            color: label === 'Выйти' ? '#e85d0a' : undefined,
+          };
+
+          if (label === 'Поддержка') {
+            return (
+              <a
+                key={label}
+                href="https://wa.me/79268849112"
+                target="_blank"
+                rel="noreferrer"
+                className="bg-white px-4 py-3.5 flex items-center justify-between cursor-pointer"
+                style={style}
+              >
+                <span className="text-sm font-medium">{label}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-muted">{sub}</span>
+                  <svg width="10" height="14" viewBox="0 0 10 14">
+                    <path d="M2 1l6 6-6 6" fill="none" stroke="#a8a39a" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                </span>
+              </a>
+            );
+          }
+
+          return (
           <div
             key={label}
-            onClick={label === 'Выйти' ? () => logout() : undefined}
+            onClick={() => logout()}
             className="bg-white px-4 py-3.5 flex items-center justify-between cursor-pointer"
-            style={{
-              borderTop: '1px solid #e7e3da',
-              borderLeft: '1px solid #e7e3da',
-              borderRight: '1px solid #e7e3da',
-              borderBottom: i === arr.length - 1 ? '1px solid #e7e3da' : 'none',
-              borderTopLeftRadius:     i === 0              ? 14 : 0,
-              borderTopRightRadius:    i === 0              ? 14 : 0,
-              borderBottomLeftRadius:  i === arr.length - 1 ? 14 : 0,
-              borderBottomRightRadius: i === arr.length - 1 ? 14 : 0,
-              color: label === 'Выйти' ? '#e85d0a' : undefined,
-            }}
+            style={style}
           >
             <span className="text-sm font-medium">{label}</span>
             <span className="flex items-center gap-2">
@@ -276,7 +300,8 @@ function ProfileView() {
               </svg>
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="py-5 text-center text-[11px] text-muted font-mono">snabju · v 0.2 · 2026</div>
