@@ -6,6 +6,10 @@ const company = {
   inn: '9722096611',
   kpp: '772201001',
   ogrn: '1257700174357',
+  checkingAccount: '40702810420000199189',
+  correspondentAccount: '30101810745374525104',
+  bankBik: '044525104',
+  bankName: 'ООО «Банк Точка»',
   legalAddress: '111024, Россия, г. Москва, вн. тер. г. муниципальный округ Лефортово, ул. Авиамоторная, д. 50, стр. 2, помещение 9/Н',
   email: '79096870542@yandex.ru',
   phone: '+7 (996) 713-28-53',
@@ -44,6 +48,10 @@ export default function LegalPage() {
             <dt>ИНН / КПП</dt><dd>{company.inn} / {company.kpp}</dd>
             <dt>ОГРН</dt><dd>{company.ogrn}</dd>
             <dt>Юр. адрес</dt><dd>{company.legalAddress}</dd>
+            <dt>Банк</dt><dd>{company.bankName}</dd>
+            <dt>БИК банка</dt><dd>{company.bankBik}</dd>
+            <dt>Расчётный счёт</dt><dd>{company.checkingAccount}</dd>
+            <dt>Корр. счёт</dt><dd>{company.correspondentAccount}</dd>
             <dt>Телефон</dt><dd><a href="tel:+79967132853" className="text-accent">{company.phone}</a></dd>
             <dt>Email</dt><dd><a href={`mailto:${company.email}`} className="break-all text-accent">{company.email}</a></dd>
           </dl>
