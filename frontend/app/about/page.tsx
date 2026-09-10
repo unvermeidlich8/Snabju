@@ -49,6 +49,19 @@ export default function AboutPage() {
       </section>
 
       <section className="mt-6">
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent">Покупателям</p>
+        <div className="mt-3 rounded-[18px] border border-divider bg-white p-5">
+          <h2 className="text-lg font-bold text-ink">Документы и условия</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Реквизиты продавца, условия оплаты, получения заказа, возврата и политика конфиденциальности.
+          </p>
+          <Link href="/legal" className="mt-3 inline-block text-sm font-semibold text-accent">
+            Открыть документы →
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-6">
         <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent">Контакты и адрес</p>
         <div className="mt-3 rounded-[18px] border border-divider bg-white p-5">
           <div className="flex gap-3">
