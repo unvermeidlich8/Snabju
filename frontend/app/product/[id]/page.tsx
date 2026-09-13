@@ -3,7 +3,6 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { PriceBlock } from '@/components/ui/PriceBlock';
@@ -17,7 +16,6 @@ import type { Product } from '@/lib/types';
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { mode } = useMode();
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -36,7 +34,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     }).then(res => {
       setSimilar(res.items.filter(x => x.id !== id).slice(0, 4));
     }).catch(() => {});
-  }, [id, mode]);
+  }, [id]);
 
   if (!product) {
     return (
@@ -111,7 +109,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         <div className="px-4 pt-3.5">
           <div className="bg-white border border-divider rounded-[16px] p-4 flex flex-col gap-3">
             <div className="flex items-end justify-between">
-              <PriceBlock p={p} mode={mode} isBox={isBox} size="lg" />
+              <PriceBlock p={p} isBox={isBox} size="lg" />
             </div>
             <div className="h-px bg-divider" />
             <div className="flex items-center gap-3">
@@ -176,7 +174,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <div key={s.id} className="shrink-0 w-[180px]">
                   <ProductCardSmall
                     p={s}
-                    mode={mode}
                     onClick={() => router.push(`/product/${s.id}`)}
                     onAddToCart={() => addToCart(s.id, 1)}
                   />

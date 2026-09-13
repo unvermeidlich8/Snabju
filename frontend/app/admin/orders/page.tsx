@@ -168,8 +168,9 @@ export default function AdminOrdersPage() {
                       <InfoRow label="Сумма" value={fmt(order.total)} mono />
                       {order.eta && <InfoRow label="ETA" value={order.eta} />}
                       <InfoRow label="Адрес / Самовывоз" value={order.address || '—'} />
-                      <InfoRow label="Получение" value={deliveryLabel(order.deliveryMethod)} />
-                      <InfoRow label="Оплата" value={paymentLabel(order.paymentMethod)} />
+					  <InfoRow label="Получение" value={deliveryLabel(order.deliveryMethod)} />
+					  <InfoRow label="Покупатель" value={customerTypeLabel(order.customerType)} />
+					  <InfoRow label="Оплата" value={paymentLabel(order.paymentMethod)} />
 					  <InfoRow label="Организация" value={order.company || '—'} />
                       {order.contactPhone && <InfoRow label="Телефон" value={order.contactPhone} mono />}
                     </div>
@@ -237,7 +238,11 @@ function deliveryLabel(method: string) {
 }
 
 function paymentLabel(method: string) {
-  return ({ invoice: 'Счёт на организацию', card: 'Картой онлайн', split: 'Долями', cash: 'Наличными' } as Record<string, string>)[method] ?? method;
+  return ({ invoice: 'Счёт на организацию', sbp: 'Через СБП' } as Record<string, string>)[method] ?? method;
+}
+
+function customerTypeLabel(type: Order['customerType']) {
+  return type === 'organization' ? 'Организация / ИП' : 'Розничный покупатель';
 }
 
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {

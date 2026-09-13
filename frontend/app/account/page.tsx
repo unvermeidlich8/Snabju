@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useMode } from '@/providers/ModeProvider';
 import { useAuth } from '@/providers/AuthProvider';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { ModeChip } from '@/components/ui/ModeChip';
@@ -115,7 +114,6 @@ function ProfileView() {
   const searchParams = useSearchParams();
   const orderPlaced = searchParams.get('orderPlaced') === '1';
   const { user, logout } = useAuth();
-  const { mode } = useMode();
   const [orders, setOrders] = useState<Order[]>([]);
   const [showOrders, setShowOrders] = useState(orderPlaced);
 
@@ -134,6 +132,9 @@ function ProfileView() {
           address: '',
 		  deliveryMethod: 'pickup',
 		  paymentMethod: 'card',
+		  paymentStatus: 'not_required',
+		  paymentLink: '',
+		  customerType: 'retail',
           comment: '',
 		  company: '',
           items: [],
@@ -150,9 +151,7 @@ function ProfileView() {
     ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : (user?.phone ?? '?').slice(-2);
 
-  const stats = mode === 'b2b'
-    ? [[String(orders.length), 'Заказов']]
-    : [[String(orders.length), 'Заказов'], ['0', 'Бонусов'], ['0', 'Любимых']];
+  const stats = [[String(orders.length), 'Заказов'], ['0', 'Бонусов'], ['0', 'Любимых']];
 
   const menuItems: [string, string | null][] = [
     ['Поддержка', 'WhatsApp'],

@@ -1,19 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import type { Product, Mode } from '@/lib/types';
+import type { Product } from '@/lib/types';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { PriceBlock } from '@/components/ui/PriceBlock';
 import { StockPill } from '@/components/ui/StockPill';
 
 interface ProductCardListProps {
   p: Product;
-  mode: Mode;
   onClick: () => void;
   onAddToCart: () => Promise<void>;
 }
 
-export function ProductCardList({ p, mode, onClick, onAddToCart }: ProductCardListProps) {
+export function ProductCardList({ p, onClick, onAddToCart }: ProductCardListProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
 
   const handleAdd = async (e: React.MouseEvent) => {
@@ -43,7 +42,7 @@ export function ProductCardList({ p, mode, onClick, onAddToCart }: ProductCardLi
         <div className="text-[11.5px] text-muted">{p.sub}</div>
         <StockPill stock={p.stock} eta={p.eta} />
         <div className="flex items-end justify-between mt-0.5">
-          <PriceBlock p={p} mode={mode} size="sm" />
+          <PriceBlock p={p} size="sm" />
           <button
             onClick={handleAdd}
             disabled={state === 'loading'}

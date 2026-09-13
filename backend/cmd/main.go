@@ -20,6 +20,7 @@ import (
 	"Snabju/backend/internal/repository/postgres"
 	"Snabju/backend/internal/service"
 	tgbot "Snabju/backend/internal/telegram"
+	"Snabju/backend/internal/tochka"
 	server "Snabju/backend/internal/transport/http"
 	"Snabju/backend/internal/transport/http/handler"
 
@@ -88,6 +89,11 @@ func main() {
 	productSvc := service.NewProductService(productRepo)
 	cartSvc := service.NewCartService(cartRepo, productRepo, markdownRepo)
 	orderSvc := service.NewOrderService(orderRepo, userRepo, cartRepo, productRepo, producer, settingsRepo)
+	tochkaClient := tochka.NewClient(tochka.Config{
+		JWT: cfg.tochkaJWT, CustomerCode: cfg.tochkaCustomerCode, MerchantID: cfg.tochkaMerchantID,
+		TaxSystemCode: cfg.tochkaTaxSystemCode, VATType: cfg.tochkaVATType, PublicBaseURL: cfg.publicBaseURL, PaymentTTL: cfg.tochkaPaymentTTL,
+	})
+	tochkaWebhookVerifier := tochka.NewWebhookVerifier()
 	markdownSvc := service.NewMarkdownService(markdownRepo)
 
 	// --- Telegram bot (optional) ---
@@ -109,7 +115,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(userSvc)
 	catalogHandler := handler.NewCatalogHandler(categorySvc, productSvc, settingsRepo)
 	cartHandler := handler.NewCartHandler(cartSvc)
-	orderHandler := handler.NewOrderHandler(orderSvc)
+	orderHandler := handler.NewOrderHandler(orderSvc, tochkaClient, tochkaWebhookVerifier, tochkaClient.CustomerCode(), cfg.tochkaMerchantID)
 	profileHandler := handler.NewProfileHandler(userSvc)
 	adminHandler := handler.NewAdminHandler(categorySvc, productSvc, orderSvc, settingsRepo, pushRepo, userRepo)
 	uploadHandler := handler.NewUploadHandler(cfg.uploadsDir, cfg.publicBaseURL)
@@ -187,6 +193,12 @@ type config struct {
 	vapidPublicKey      string
 	vapidPrivateKey     string
 	vapidSubject        string
+	tochkaJWT           string
+	tochkaCustomerCode  string
+	tochkaMerchantID    string
+	tochkaTaxSystemCode string
+	tochkaVATType       string
+	tochkaPaymentTTL    int
 }
 
 func loadConfig() config {
@@ -211,6 +223,14 @@ func loadConfig() config {
 		vapidPublicKey:      getEnv("VAPID_PUBLIC_KEY", ""),
 		vapidPrivateKey:     getEnv("VAPID_PRIVATE_KEY", ""),
 		vapidSubject:        getEnv("VAPID_SUBJECT", ""),
+		tochkaJWT:           getEnv("TOCHKA_JWT", getEnv("JWT_TOCHKA", "")),
+		tochkaCustomerCode:  getEnv("TOCHKA_CUSTOMER_CODE", ""),
+		tochkaMerchantID:    getEnv("TOCHKA_MERCHANT_ID", ""),
+		tochkaTaxSystemCode: getEnv("TOCHKA_TAX_SYSTEM_CODE", ""),
+		tochkaVATType:       getEnv("TOCHKA_VAT_TYPE", ""),
+	}
+	if ttl, err := strconv.Atoi(getEnv("TOCHKA_PAYMENT_TTL_MINUTES", "1440")); err == nil && ttl > 0 {
+		cfg.tochkaPaymentTTL = ttl
 	}
 
 	ttlHours := getEnv("SESSION_TTL_HOURS", "720")

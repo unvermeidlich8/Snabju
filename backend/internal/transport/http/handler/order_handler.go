@@ -2,20 +2,29 @@ package handler
 
 import (
 	"Snabju/backend/internal/domain"
+	"Snabju/backend/internal/tochka"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 type OrderHandler struct {
-	orderService domain.OrderService
+	orderService       domain.OrderService
+	tochkaClient       *tochka.Client
+	webhookVerifier    *tochka.WebhookVerifier
+	tochkaCustomerCode string
+	tochkaMerchantID   string
 }
 
-func NewOrderHandler(orderService domain.OrderService) *OrderHandler {
-	return &OrderHandler{orderService: orderService}
+func NewOrderHandler(orderService domain.OrderService, tochkaClient *tochka.Client, webhookVerifier *tochka.WebhookVerifier, customerCode, merchantID string) *OrderHandler {
+	return &OrderHandler{orderService: orderService, tochkaClient: tochkaClient, webhookVerifier: webhookVerifier, tochkaCustomerCode: customerCode, tochkaMerchantID: merchantID}
 }
 
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -26,11 +35,16 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		GuestEmail     string `json:"guest_email"`
 		DeliveryMethod string `json:"delivery_method"`
 		PaymentMethod  string `json:"payment_method"`
+		CustomerType   string `json:"customer_type"`
 		Comment        string `json:"comment"`
 		Company        string `json:"company"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.PaymentMethod == "sbp" && (h.tochkaClient == nil || !h.tochkaClient.Enabled()) {
+		writeError(w, http.StatusServiceUnavailable, "оплата через СБП временно недоступна")
 		return
 	}
 
@@ -46,6 +60,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		GuestEmail:     req.GuestEmail,
 		DeliveryMethod: req.DeliveryMethod,
 		PaymentMethod:  req.PaymentMethod,
+		CustomerType:   req.CustomerType,
 		Comment:        req.Comment,
 		Company:        req.Company,
 	}
@@ -55,8 +70,88 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		handleServiceError(w, err)
 		return
 	}
+	if created.PaymentMethod == "sbp" {
+		operationID, paymentLink, err := h.tochkaClient.CreateSBPPayment(r.Context(), created)
+		if err != nil {
+			slog.Error("create Tochka payment link", "order_id", created.ID, "err", err)
+			writeError(w, http.StatusBadGateway, "не удалось создать ссылку на оплату")
+			return
+		}
+		if err := h.orderService.SetPaymentLink(r.Context(), created.ID, operationID, paymentLink); err != nil {
+			slog.Error("save Tochka payment link", "order_id", created.ID, "err", err)
+			writeError(w, http.StatusInternalServerError, "не удалось сохранить ссылку на оплату")
+			return
+		}
+		created.PaymentStatus = "created"
+		created.PaymentOperationID = operationID
+		created.PaymentLink = paymentLink
+	}
 
 	writeJSON(w, http.StatusCreated, created)
+}
+
+func (h *OrderHandler) TochkaWebhook(w http.ResponseWriter, r *http.Request) {
+	if h.webhookVerifier == nil {
+		writeError(w, http.StatusServiceUnavailable, "webhook не настроен")
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid webhook body")
+		return
+	}
+	claims, err := h.webhookVerifier.Verify(r.Context(), string(body))
+	if err != nil {
+		slog.Warn("invalid Tochka webhook", "err", err)
+		writeError(w, http.StatusUnauthorized, "invalid webhook")
+		return
+	}
+	if asString(claims["webhookType"]) != "acquiringInternetPayment" || asString(claims["status"]) != "APPROVED" || asString(claims["paymentType"]) != "sbp" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if h.tochkaCustomerCode != "" && asString(claims["customerCode"]) != h.tochkaCustomerCode {
+		writeError(w, http.StatusUnauthorized, "invalid customer")
+		return
+	}
+	if h.tochkaMerchantID != "" && asString(claims["merchantId"]) != h.tochkaMerchantID {
+		writeError(w, http.StatusUnauthorized, "invalid merchant")
+		return
+	}
+	orderID, err := uuid.Parse(asString(claims["paymentLinkId"]))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid payment link")
+		return
+	}
+	amount, err := strconv.ParseFloat(asString(claims["amount"]), 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid amount")
+		return
+	}
+	if err := h.orderService.ConfirmPayment(r.Context(), orderID, asString(claims["operationId"]), amount); err != nil {
+		var validation domain.ErrValidation
+		if errors.As(err, &validation) {
+			writeError(w, http.StatusBadRequest, validation.Msg)
+			return
+		}
+		slog.Error("confirm Tochka payment", "order_id", orderID, "err", err)
+		writeError(w, http.StatusInternalServerError, "payment processing failed")
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func asString(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case json.Number:
+		return v.String()
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	default:
+		return fmt.Sprint(v)
+	}
 }
 
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {

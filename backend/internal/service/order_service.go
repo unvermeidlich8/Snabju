@@ -52,20 +52,41 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	if o.DeliveryMethod == "" {
 		o.DeliveryMethod = "pickup"
 	}
-	o.PaymentMethod = "invoice"
+	if o.CustomerType == "" {
+		o.CustomerType = "retail"
+	}
+	if o.CustomerType != "retail" && o.CustomerType != "organization" {
+		return nil, domain.ErrValidation{Field: "customer_type", Msg: "некорректный тип покупателя"}
+	}
+	if o.PaymentMethod == "" {
+		return nil, domain.ErrValidation{Field: "payment_method", Msg: "выберите способ оплаты"}
+	}
+	validPaymentMethods := map[string]bool{"invoice": true, "sbp": true}
+	if !validPaymentMethods[o.PaymentMethod] {
+		return nil, domain.ErrValidation{Field: "payment_method", Msg: "некорректный способ оплаты"}
+	}
+	if (o.CustomerType == "retail" && o.PaymentMethod != "sbp") || (o.CustomerType == "organization" && o.PaymentMethod != "invoice") {
+		return nil, domain.ErrValidation{Field: "payment_method", Msg: "некорректный способ оплаты для выбранного покупателя"}
+	}
 	if o.DeliveryMethod != "pickup" && o.DeliveryMethod != "delivery" {
 		return nil, domain.ErrValidation{Field: "delivery_method", Msg: "некорректный способ получения"}
 	}
 	if o.UserID != nil && o.Company == "" {
 		if user, err := s.userRepo.GetByID(ctx, *o.UserID); err == nil {
 			o.Company = user.Company
+			if user.Email != nil {
+				o.GuestEmail = *user.Email
+			}
 		}
 	}
-	if strings.TrimSpace(o.Company) == "" {
+	if o.CustomerType == "organization" && strings.TrimSpace(o.Company) == "" {
 		return nil, domain.ErrValidation{Field: "company", Msg: "укажите организацию"}
 	}
 	if o.UserID == nil && strings.TrimSpace(o.SessionID) == "" {
 		return nil, domain.ErrValidation{Field: "session_id", Msg: "required for guest orders"}
+	}
+	if o.PaymentMethod == "sbp" && strings.TrimSpace(o.GuestEmail) == "" {
+		return nil, domain.ErrValidation{Field: "email", Msg: "укажите email для кассового чека"}
 	}
 
 	// Fetch cart items
@@ -105,7 +126,7 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 		} else if ci.IsBox && product.PriceBox != nil {
 			price = *product.PriceBox
 		}
-		if ci.MarkdownPrice == nil {
+		if ci.MarkdownPrice == nil && o.CustomerType == "organization" {
 			price = math.Round(price*(100-discount)) / 100
 		}
 
@@ -140,6 +161,11 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	o.UpdatedAt = o.CreatedAt
 	o.Status = "Новый"
 	o.StatusKind = domain.OrderStatusPending
+	if o.PaymentMethod == "sbp" {
+		o.PaymentStatus = "pending"
+	} else {
+		o.PaymentStatus = "not_required"
+	}
 	o.ItemsCount = len(orderItems)
 	o.Total = total
 	o.Items = orderItems
@@ -148,10 +174,38 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 		return nil, fmt.Errorf("orderService.Create: %w", err)
 	}
 
-	s.publishOrderConfirmed(ctx, o)
+	if o.PaymentMethod != "sbp" {
+		s.publishOrderConfirmed(ctx, o)
+	}
 	metrics.OrdersCreatedTotal.Inc()
 
 	return o, nil
+}
+
+func (s *orderService) SetPaymentLink(ctx context.Context, id uuid.UUID, operationID, paymentLink string) error {
+	return s.orderRepo.UpdatePayment(ctx, id, "created", operationID, paymentLink, nil)
+}
+
+func (s *orderService) ConfirmPayment(ctx context.Context, id uuid.UUID, operationID string, amount float64) error {
+	order, err := s.orderRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("orderService.ConfirmPayment: get order: %w", err)
+	}
+	if order.PaymentMethod != "sbp" || order.PaymentOperationID != operationID {
+		return domain.ErrValidation{Field: "payment", Msg: "платёж не соответствует заказу"}
+	}
+	if math.Abs(order.Total-amount) > 0.009 {
+		return domain.ErrValidation{Field: "payment", Msg: "сумма платежа не соответствует заказу"}
+	}
+	if order.PaymentStatus == "paid" {
+		return nil
+	}
+	now := time.Now()
+	if err := s.orderRepo.UpdatePayment(ctx, id, "paid", operationID, order.PaymentLink, &now); err != nil {
+		return fmt.Errorf("orderService.ConfirmPayment: update payment: %w", err)
+	}
+	s.publishOrderConfirmed(ctx, order)
+	return nil
 }
 
 func (s *orderService) publishOrderConfirmed(ctx context.Context, o *domain.Order) {

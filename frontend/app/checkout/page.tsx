@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { useAuth } from '@/providers/AuthProvider';
 import { fmt, formatPhone, toApiPhone } from '@/lib/format';
 
 type DeliveryType = 'truck' | 'pickup' | 'pallet';
-type PayType = 'invoice' | 'card' | 'split' | 'cash';
+type CustomerType = 'retail' | 'organization';
+type PayType = 'invoice' | 'sbp';
 
 function Field({ label, optional, children }: { label: string; optional?: boolean; children: React.ReactNode }) {
   return (
@@ -47,53 +47,59 @@ const inputCls = 'w-full text-sm text-ink font-medium bg-transparent outline-non
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { mode } = useMode();
   const { items } = useCart();
   const { user } = useAuth();
 
   const [step, setStep] = useState(1);
   const delivery: DeliveryType = 'pickup';
-  const [pay] = useState<PayType>('invoice');
+  const [customerType, setCustomerType] = useState<CustomerType>('retail');
+  const [pay, setPay] = useState<PayType>('sbp');
 	const [company, setCompany] = useState(user?.company ?? '');
   const [address, setAddress] = useState('');
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(formatPhone(user?.phone ?? ''));
-  const [guestEmail, setGuestEmail] = useState('');
+  const [guestEmail, setGuestEmail] = useState(user?.email ?? '');
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const orderTotal = items.reduce((s, it) => s + (it.isBox ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
-
-  const payOptions: { id: PayType; title: string; sub: string }[] = [
-    ...(mode === 'b2b' ? [{ id: 'invoice' as PayType, title: 'Счёт на организацию', sub: 'оплата 14 дней, безнал' }] : []),
-    { id: 'card',  title: 'Картой онлайн',          sub: 'Visa · Мир · MasterCard' },
-    { id: 'split', title: 'Долями · 4 платежа',      sub: 'без процентов и переплат' },
-    { id: 'cash',  title: 'Наличные при получении',  sub: 'до 100 000 ₽' },
-  ];
+  const retailTotal = items.reduce((s, it) => s + (it.isBox ? (it.product.priceBox ?? it.product.price) : it.product.price) * it.qty, 0);
+  const discountPercent = customerType === 'organization'
+    ? Math.max(...items.map(it => it.product.b2bDiscountPercent), 0)
+    : 0;
+  const orderTotal = Math.round(retailTotal * (100 - discountPercent)) / 100;
 
   const handleSubmit = async () => {
     if (!name.trim() || !phone.trim()) {
       setError('Заполните имя и телефон');
       return;
     }
-    if (!user && !guestEmail.trim()) {
-      setError('Укажите email для получения уведомления о заказе');
+    if (!guestEmail.trim()) {
+		setError('Укажите email для кассового чека');
+      return;
+    }
+    if (customerType === 'organization' && !company.trim()) {
+      setError('Укажите организацию');
       return;
     }
     setError('');
     setSubmitting(true);
     try {
-      await api.createOrder({
+      const order = await api.createOrder({
         contact_name: name.trim(),
         contact_phone: toApiPhone(phone),
         address: address.trim() || 'Самовывоз — Москва, Новокуркинское шоссе 14',
 		delivery_method: delivery,
 		payment_method: pay,
+		customer_type: customerType,
 		comment: comment.trim(),
 		company: company.trim(),
-        ...(!user && guestEmail.trim() ? { guest_email: guestEmail.trim() } : {}),
+		guest_email: guestEmail.trim(),
       });
+		if (order.paymentLink) {
+			window.location.assign(order.paymentLink);
+			return;
+		}
       router.push('/account?orderPlaced=1');
     } catch (e: any) {
       setError(e.message ?? 'Ошибка при оформлении заказа');
@@ -165,7 +171,6 @@ export default function CheckoutPage() {
       {/* Step 2: Contacts */}
       {step === 2 && (
         <div className="px-4 pt-5 flex flex-col gap-2.5">
-		  <Field label="Организация"><input className={inputCls} placeholder="ООО «Компания»" value={company} onChange={e => setCompany(e.target.value)} /></Field>
           <Field label="Имя получателя">
             <input
               className={inputCls}
@@ -183,8 +188,7 @@ export default function CheckoutPage() {
               onChange={e => setPhone(formatPhone(e.target.value))}
             />
           </Field>
-          {!user && (
-            <Field label="Email для уведомления">
+          <Field label="Email для кассового чека">
               <input
                 className={inputCls}
                 placeholder="email@example.com"
@@ -192,8 +196,7 @@ export default function CheckoutPage() {
                 value={guestEmail}
                 onChange={e => setGuestEmail(e.target.value)}
               />
-            </Field>
-          )}
+          </Field>
           <Field label="Комментарий" optional>
             <input
               className={inputCls}
@@ -208,7 +211,14 @@ export default function CheckoutPage() {
       {/* Step 3: Payment */}
       {step === 3 && (
         <div className="px-4 pt-5 flex flex-col gap-2.5">
-		  <RadioOption on title="Счёт на организацию" sub="Безналичная оплата по выставленному счёту" onClick={() => {}} />
+          <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase">Покупатель</div>
+          <RadioOption on={customerType === 'retail'} title="Розничный покупатель" sub="Покупка для личных нужд" onClick={() => { setCustomerType('retail'); setPay('sbp'); }} />
+          <RadioOption on={customerType === 'organization'} title="Организация или ИП" sub="Мы свяжемся с вами и выставим счёт" onClick={() => { setCustomerType('organization'); setPay('invoice'); }} />
+          {customerType === 'organization' && <Field label="Организация"><input className={inputCls} placeholder="ООО «Компания»" value={company} onChange={e => setCompany(e.target.value)} /></Field>}
+          <div className="text-[11px] text-muted font-mono tracking-[0.4px] uppercase mt-2">Способ оплаты</div>
+          {customerType === 'organization'
+            ? <RadioOption on title="Счёт на организацию" sub="Мы свяжемся с вами и выставим счёт" onClick={() => setPay('invoice')} />
+            : <RadioOption on title="Через СБП" sub="Оплата по QR-коду" onClick={() => setPay('sbp')} />}
         </div>
       )}
 

@@ -112,6 +112,9 @@ function mapOrder(r: Record<string, any>): Order {
     address: r.address ?? '',
     deliveryMethod: r.delivery_method ?? 'pickup',
     paymentMethod: r.payment_method ?? 'card',
+		paymentStatus: r.payment_status ?? 'not_required',
+		paymentLink: r.payment_link ?? '',
+		customerType: r.customer_type ?? 'retail',
     comment: r.comment ?? '',
     company: r.company ?? '',
     items: (r.items ?? []).map(mapOrderItem),
@@ -222,7 +225,7 @@ export const api = {
     await req<void>(`/api/v1/cart/items/${id}`, { method: 'DELETE' });
   },
 
-  async createOrder(data: { contact_name: string; contact_phone: string; address: string; guest_email?: string; delivery_method: string; payment_method: string; comment?: string; company: string }): Promise<Order> {
+  async createOrder(data: { contact_name: string; contact_phone: string; address: string; guest_email?: string; delivery_method: string; payment_method: string; customer_type: 'retail' | 'organization'; comment?: string; company?: string }): Promise<Order> {
     const r = await req<Record<string, any>>('/api/v1/orders', { method: 'POST', body: JSON.stringify(data) });
     return mapOrder(r);
   },

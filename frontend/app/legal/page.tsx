@@ -12,6 +12,7 @@ const company = {
   bankName: 'ООО «Банк Точка»',
   legalAddress: '111024, Россия, г. Москва, вн. тер. г. муниципальный округ Лефортово, ул. Авиамоторная, д. 50, стр. 2, помещение 9/Н',
   email: '79096870542@yandex.ru',
+  managerEmail: 'snabjuManage@yandex.ru',
   phone: '+7 (996) 713-28-53',
 };
 
@@ -64,11 +65,11 @@ export default function LegalPage() {
 
         <Section id="delivery" title="Получение заказа">
           <p>Сейчас доступен самовывоз по адресу: Москва, Новокуркинское шоссе, 14. Срок готовности заказа указывается при оформлении. Перед приездом дождитесь подтверждения от магазина.</p>
-          <p className="mt-3">По вопросам получения заказа свяжитесь с нами по телефону <a href="tel:+79967132853" className="text-accent">{company.phone}</a> или email <a href={`mailto:${company.email}`} className="break-all text-accent">{company.email}</a>.</p>
+          <p className="mt-3">По вопросам получения заказа свяжитесь с нами по телефону <a href="tel:+79967132853" className="text-accent">{company.phone}</a> или email <a href={`mailto:${company.managerEmail}`} className="break-all text-accent">{company.managerEmail}</a>.</p>
         </Section>
 
         <Section id="returns" title="Возврат и обмен">
-          <p>Для возврата или обмена товара напишите на <a href={`mailto:${company.email}`} className="break-all text-accent">{company.email}</a> либо позвоните по номеру <a href="tel:+79967132853" className="text-accent">{company.phone}</a>. Укажите номер заказа, наименование товара и причину обращения.</p>
+          <p>Для возврата или обмена товара напишите на <a href={`mailto:${company.managerEmail}`} className="break-all text-accent">{company.managerEmail}</a> либо позвоните по номеру <a href="tel:+79967132853" className="text-accent">{company.phone}</a>. Укажите номер заказа, наименование товара и причину обращения.</p>
           <p className="mt-3">Порядок, сроки и условия возврата определяются законодательством Российской Федерации и зависят от категории товара и причины возврата. Деньги за возвращённый товар возвращаются тем же способом, которым была произведена оплата, если иной порядок не согласован с покупателем.</p>
         </Section>
 

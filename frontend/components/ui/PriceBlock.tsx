@@ -1,14 +1,13 @@
-import type { Product, Mode } from '@/lib/types';
+import type { Product } from '@/lib/types';
 import { fmtPlain } from '@/lib/format';
 
 interface PriceBlockProps {
   p: Product;
-  mode: Mode;
   isBox?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function PriceBlock({ p, mode, isBox = false, size = 'md' }: PriceBlockProps) {
+export function PriceBlock({ p, isBox = false, size = 'md' }: PriceBlockProps) {
   const big = size === 'lg';
   const basePrice = isBox ? (p.priceBox ?? p.price) : p.price;
   const unitPrice = basePrice;
@@ -22,7 +21,6 @@ export function PriceBlock({ p, mode, isBox = false, size = 'md' }: PriceBlockPr
         <span className={`font-bold text-ink ${big ? 'text-2xl' : 'text-lg'}`} style={{ letterSpacing: '-0.4px' }}>
           {fmtPlain(unitPrice)} <span className="font-medium">₽</span>
         </span>
-		{p.b2bDiscountPercent > 0 && <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold" style={{ background: '#dcfce7', color: '#15803d' }}>Опт −{p.b2bDiscountPercent}%</span>}
         {p.oldPrice && (
           <span className={`text-faint line-through ${big ? 'text-sm' : 'text-[13px]'}`}>
             {fmtPlain(p.oldPrice)}

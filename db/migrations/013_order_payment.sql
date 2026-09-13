@@ -1,0 +1,11 @@
+-- +goose Up
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) NOT NULL DEFAULT 'not_required';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_operation_id VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_link TEXT NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+
+-- +goose Down
+ALTER TABLE orders DROP COLUMN IF EXISTS paid_at;
+ALTER TABLE orders DROP COLUMN IF EXISTS payment_link;
+ALTER TABLE orders DROP COLUMN IF EXISTS payment_operation_id;
+ALTER TABLE orders DROP COLUMN IF EXISTS payment_status;

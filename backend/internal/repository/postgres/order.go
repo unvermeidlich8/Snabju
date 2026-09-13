@@ -20,13 +20,13 @@ func NewPostgresOrderRepo(pool *pgxpool.Pool) domain.OrderRepository {
 }
 
 const orderCols = `id, user_id, session_id, status, status_kind, items_count, total, eta,
-	contact_name, contact_phone, address, COALESCE(guest_email, ''), delivery_method, payment_method, comment, company, created_at, updated_at`
+	contact_name, contact_phone, address, COALESCE(guest_email, ''), delivery_method, payment_method, payment_status, payment_operation_id, payment_link, paid_at, customer_type, comment, company, created_at, updated_at`
 
 func (r *postgresOrderRepo) scanOrder(rows pgx.Rows) (domain.Order, error) {
 	var o domain.Order
 	err := rows.Scan(
 		&o.ID, &o.UserID, &o.SessionID, &o.Status, &o.StatusKind, &o.ItemsCount, &o.Total, &o.ETA,
-		&o.ContactName, &o.ContactPhone, &o.Address, &o.GuestEmail, &o.DeliveryMethod, &o.PaymentMethod, &o.Comment, &o.Company, &o.CreatedAt, &o.UpdatedAt,
+		&o.ContactName, &o.ContactPhone, &o.Address, &o.GuestEmail, &o.DeliveryMethod, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentOperationID, &o.PaymentLink, &o.PaidAt, &o.CustomerType, &o.Comment, &o.Company, &o.CreatedAt, &o.UpdatedAt,
 	)
 	return o, err
 }
@@ -40,10 +40,10 @@ func (r *postgresOrderRepo) Create(ctx context.Context, o *domain.Order) error {
 	o.UpdatedAt = now
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO orders(id, user_id, session_id, status, status_kind, items_count, total, eta,
-		contact_name, contact_phone, address, guest_email, delivery_method, payment_method, comment, company, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+		contact_name, contact_phone, address, guest_email, delivery_method, payment_method, payment_status, payment_operation_id, payment_link, paid_at, customer_type, comment, company, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
 		o.ID, o.UserID, o.SessionID, o.Status, o.StatusKind, o.ItemsCount, o.Total, o.ETA,
-		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.DeliveryMethod, o.PaymentMethod, o.Comment, o.Company, o.CreatedAt, o.UpdatedAt,
+		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.DeliveryMethod, o.PaymentMethod, o.PaymentStatus, o.PaymentOperationID, o.PaymentLink, o.PaidAt, o.CustomerType, o.Comment, o.Company, o.CreatedAt, o.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("postgres.OrderRepo.Create: %w", err)
@@ -86,10 +86,10 @@ func (r *postgresOrderRepo) CreateCheckout(ctx context.Context, o *domain.Order,
 
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO orders(id, user_id, session_id, status, status_kind, items_count, total, eta,
-		contact_name, contact_phone, address, guest_email, delivery_method, payment_method, comment, company, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+		contact_name, contact_phone, address, guest_email, delivery_method, payment_method, payment_status, payment_operation_id, payment_link, paid_at, customer_type, comment, company, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
 		o.ID, o.UserID, o.SessionID, o.Status, o.StatusKind, o.ItemsCount, o.Total, o.ETA,
-		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.DeliveryMethod, o.PaymentMethod, o.Comment, o.Company, o.CreatedAt, o.UpdatedAt,
+		o.ContactName, o.ContactPhone, o.Address, nullableString(o.GuestEmail), o.DeliveryMethod, o.PaymentMethod, o.PaymentStatus, o.PaymentOperationID, o.PaymentLink, o.PaidAt, o.CustomerType, o.Comment, o.Company, o.CreatedAt, o.UpdatedAt,
 	); err != nil {
 		return fmt.Errorf("postgres.OrderRepo.CreateCheckout order: %w", err)
 	}
@@ -239,6 +239,14 @@ func (r *postgresOrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, kind
 	}
 	if result.RowsAffected() == 0 {
 		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (r *postgresOrderRepo) UpdatePayment(ctx context.Context, id uuid.UUID, paymentStatus, operationID, paymentLink string, paidAt *time.Time) error {
+	_, err := r.pool.Exec(ctx, `UPDATE orders SET payment_status = $1, payment_operation_id = $2, payment_link = $3, paid_at = $4, updated_at = NOW() WHERE id = $5`, paymentStatus, operationID, paymentLink, paidAt, id)
+	if err != nil {
+		return fmt.Errorf("postgres.OrderRepo.UpdatePayment: %w", err)
 	}
 	return nil
 }

@@ -29,25 +29,30 @@ type OrderItem struct {
 }
 
 type Order struct {
-	ID             uuid.UUID   `json:"id"`
-	UserID         *uuid.UUID  `json:"user_id,omitempty"`
-	SessionID      string      `json:"session_id,omitempty"`
-	Status         string      `json:"status"`
-	StatusKind     OrderStatus `json:"status_kind"`
-	ItemsCount     int         `json:"items_count"`
-	Total          float64     `json:"total"`
-	ETA            string      `json:"eta"`
-	ContactName    string      `json:"contact_name"`
-	ContactPhone   string      `json:"contact_phone"`
-	Address        string      `json:"address"`
-	GuestEmail     string      `json:"guest_email,omitempty"`
-	DeliveryMethod string      `json:"delivery_method"`
-	PaymentMethod  string      `json:"payment_method"`
-	Comment        string      `json:"comment,omitempty"`
-	Company        string      `json:"company"`
-	Items          []OrderItem `json:"items,omitempty"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
+	ID                 uuid.UUID   `json:"id"`
+	UserID             *uuid.UUID  `json:"user_id,omitempty"`
+	SessionID          string      `json:"session_id,omitempty"`
+	Status             string      `json:"status"`
+	StatusKind         OrderStatus `json:"status_kind"`
+	ItemsCount         int         `json:"items_count"`
+	Total              float64     `json:"total"`
+	ETA                string      `json:"eta"`
+	ContactName        string      `json:"contact_name"`
+	ContactPhone       string      `json:"contact_phone"`
+	Address            string      `json:"address"`
+	GuestEmail         string      `json:"guest_email,omitempty"`
+	DeliveryMethod     string      `json:"delivery_method"`
+	PaymentMethod      string      `json:"payment_method"`
+	PaymentStatus      string      `json:"payment_status"`
+	PaymentOperationID string      `json:"payment_operation_id,omitempty"`
+	PaymentLink        string      `json:"payment_link,omitempty"`
+	PaidAt             *time.Time  `json:"paid_at,omitempty"`
+	CustomerType       string      `json:"customer_type"`
+	Comment            string      `json:"comment,omitempty"`
+	Company            string      `json:"company"`
+	Items              []OrderItem `json:"items,omitempty"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
 }
 
 type OrderRepository interface {
@@ -60,6 +65,7 @@ type OrderRepository interface {
 	ListBySessionID(ctx context.Context, sessionID string) ([]Order, error)
 	ListAll(ctx context.Context, limit, offset int) ([]Order, int, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, kind OrderStatus, status string) error
+	UpdatePayment(ctx context.Context, id uuid.UUID, paymentStatus, operationID, paymentLink string, paidAt *time.Time) error
 }
 
 type OrderService interface {
@@ -69,4 +75,6 @@ type OrderService interface {
 	ListBySession(ctx context.Context, sessionID string) ([]Order, error)
 	ListAll(ctx context.Context, limit, offset int) ([]Order, int, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, kind OrderStatus, status string) error
+	SetPaymentLink(ctx context.Context, id uuid.UUID, operationID, paymentLink string) error
+	ConfirmPayment(ctx context.Context, id uuid.UUID, operationID string, amount float64) error
 }

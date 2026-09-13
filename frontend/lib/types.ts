@@ -1,5 +1,3 @@
-export type Mode = 'b2c' | 'b2b';
-
 export type ProductTag = 'Хит' | 'Акция' | 'Новинка' | null;
 export type ProductUnit = 'шт' | 'кор';
 export type CatIcon = 'wool' | 'xps' | 'can' | 'tube' | 'roll' | 'block' | 'sheet' | 'tool';
@@ -90,6 +88,9 @@ export interface Order {
   address: string;
   deliveryMethod: string;
   paymentMethod: string;
+  paymentStatus: string;
+  paymentLink: string;
+  customerType: 'retail' | 'organization';
   comment: string;
   company: string;
   items: OrderItem[];

@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { ProductCardList } from '@/components/cards/ProductCardList';
@@ -23,7 +22,6 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 function CatalogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { mode } = useMode();
   const { addToCart } = useCart();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -258,7 +256,6 @@ function CatalogContent() {
             <ProductCardList
               key={p.id}
               p={p}
-              mode={mode}
               onClick={() => router.push(`/product/${p.id}`)}
               onAddToCart={() => addToCart(p.id, 1)}
             />

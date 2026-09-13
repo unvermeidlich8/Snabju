@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useMode } from '@/providers/ModeProvider';
 import { useCart } from '@/providers/CartProvider';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { ModeChip } from '@/components/ui/ModeChip';
@@ -15,7 +14,6 @@ import { fmt } from '@/lib/format';
 
 export default function HomePage() {
   const router = useRouter();
-  const { mode } = useMode();
   const { addToCart } = useCart();
   const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
@@ -114,7 +112,6 @@ export default function HomePage() {
               <div key={p.id} className="shrink-0 w-[200px]" style={{ scrollSnapAlign: 'start' }}>
                 <ProductCardSmall
                   p={p}
-                  mode={mode}
                   onClick={() => router.push(`/product/${p.id}`)}
                   onAddToCart={() => addToCart(p.id, 1)}
                 />

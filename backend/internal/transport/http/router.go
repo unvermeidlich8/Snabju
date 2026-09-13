@@ -43,6 +43,7 @@ func NewRouter(
 	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(uploadsDir))))
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Post("/payments/tochka/webhook", order.TochkaWebhook)
 		r.Get("/yandex-market.yml", yandexMarket.Feed)
 		r.Post("/auth/register", auth.Register)
 		r.Post("/auth/login", auth.Login)
