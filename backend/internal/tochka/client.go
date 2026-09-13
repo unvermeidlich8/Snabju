@@ -135,7 +135,7 @@ func (c *Client) CreateSBPPayment(ctx context.Context, order *domain.Order) (ope
 		return "", "", fmt.Errorf("read payment response: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", "", fmt.Errorf("Точка вернула статус %d", resp.StatusCode)
+		return "", "", fmt.Errorf("Точка вернула статус %d: %s", resp.StatusCode, responseErrorMessage(responseBody))
 	}
 	var result paymentResponse
 	if err := json.Unmarshal(responseBody, &result); err != nil {
@@ -145,6 +145,18 @@ func (c *Client) CreateSBPPayment(ctx context.Context, order *domain.Order) (ope
 		return "", "", fmt.Errorf("Точка не вернула ссылку на оплату")
 	}
 	return result.Data.OperationID, result.Data.PaymentLink, nil
+}
+
+func responseErrorMessage(body []byte) string {
+	const maxLength = 1000
+	message := strings.Join(strings.Fields(string(body)), " ")
+	if message == "" {
+		return "ответ без текста"
+	}
+	if len(message) > maxLength {
+		return message[:maxLength] + "…"
+	}
+	return message
 }
 
 func tochkaMeasure(unit string) string {
