@@ -66,7 +66,9 @@ func (r *postgresOrderRepo) CreateItems(ctx context.Context, items []domain.Orde
 	return nil
 }
 
-// CreateCheckout atomically reserves stock, saves the order and clears its cart.
+// CreateCheckout saves the order and clears its cart. For invoice orders it also
+// decrements stock in the same transaction; SBP orders pass an empty stock map
+// and stock is decremented only after a confirmed payment.
 func (r *postgresOrderRepo) CreateCheckout(ctx context.Context, o *domain.Order, items []domain.OrderItem, stockByProduct map[uuid.UUID]int) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -247,6 +249,62 @@ func (r *postgresOrderRepo) UpdatePayment(ctx context.Context, id uuid.UUID, pay
 	_, err := r.pool.Exec(ctx, `UPDATE orders SET payment_status = $1, payment_operation_id = $2, payment_link = $3, paid_at = $4, updated_at = NOW() WHERE id = $5`, paymentStatus, operationID, paymentLink, paidAt, id)
 	if err != nil {
 		return fmt.Errorf("postgres.OrderRepo.UpdatePayment: %w", err)
+	}
+	return nil
+}
+
+// ConfirmPayment atomically decrements stock and marks an SBP order as paid.
+// The row lock makes repeated webhooks idempotent.
+func (r *postgresOrderRepo) ConfirmPayment(ctx context.Context, id uuid.UUID, operationID string, paidAt time.Time) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("postgres.OrderRepo.ConfirmPayment begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var paymentStatus string
+	if err := tx.QueryRow(ctx, `SELECT payment_status FROM orders WHERE id = $1 FOR UPDATE`, id).Scan(&paymentStatus); err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.ErrNotFound
+		}
+		return fmt.Errorf("postgres.OrderRepo.ConfirmPayment lock order: %w", err)
+	}
+	if paymentStatus == "paid" {
+		return tx.Commit(ctx)
+	}
+
+	rows, err := tx.Query(ctx, `SELECT product_id, SUM(qty) FROM order_items WHERE order_id = $1 GROUP BY product_id`, id)
+	if err != nil {
+		return fmt.Errorf("postgres.OrderRepo.ConfirmPayment order items: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var productID uuid.UUID
+		var qty int
+		if err := rows.Scan(&productID, &qty); err != nil {
+			return fmt.Errorf("postgres.OrderRepo.ConfirmPayment scan item: %w", err)
+		}
+		result, err := tx.Exec(ctx, `UPDATE products SET stock = stock - $1, updated_at = NOW() WHERE id = $2 AND is_active AND stock >= $1`, qty, productID)
+		if err != nil {
+			return fmt.Errorf("postgres.OrderRepo.ConfirmPayment decrement stock: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return fmt.Errorf("postgres.OrderRepo.ConfirmPayment: product %s is unavailable", productID)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("postgres.OrderRepo.ConfirmPayment iterate items: %w", err)
+	}
+
+	result, err := tx.Exec(ctx, `UPDATE orders SET payment_status = 'paid', payment_operation_id = $1, paid_at = $2, updated_at = NOW() WHERE id = $3`, operationID, paidAt, id)
+	if err != nil {
+		return fmt.Errorf("postgres.OrderRepo.ConfirmPayment update order: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("postgres.OrderRepo.ConfirmPayment commit: %w", err)
 	}
 	return nil
 }

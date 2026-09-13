@@ -66,6 +66,7 @@ type OrderRepository interface {
 	ListAll(ctx context.Context, limit, offset int) ([]Order, int, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, kind OrderStatus, status string) error
 	UpdatePayment(ctx context.Context, id uuid.UUID, paymentStatus, operationID, paymentLink string, paidAt *time.Time) error
+	ConfirmPayment(ctx context.Context, id uuid.UUID, operationID string, paidAt time.Time) error
 }
 
 type OrderService interface {

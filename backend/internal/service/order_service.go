@@ -170,6 +170,11 @@ func (s *orderService) Create(ctx context.Context, o *domain.Order) (*domain.Ord
 	o.Total = total
 	o.Items = orderItems
 
+	// An SBP order must not affect inventory until Tochka confirms the payment.
+	// Invoice orders retain the existing behaviour: stock is decremented at checkout.
+	if o.PaymentMethod == "sbp" {
+		stockByProduct = nil
+	}
 	if err := s.orderRepo.CreateCheckout(ctx, o, orderItems, stockByProduct); err != nil {
 		return nil, fmt.Errorf("orderService.Create: %w", err)
 	}
@@ -201,9 +206,11 @@ func (s *orderService) ConfirmPayment(ctx context.Context, id uuid.UUID, operati
 		return nil
 	}
 	now := time.Now()
-	if err := s.orderRepo.UpdatePayment(ctx, id, "paid", operationID, order.PaymentLink, &now); err != nil {
+	if err := s.orderRepo.ConfirmPayment(ctx, id, operationID, now); err != nil {
 		return fmt.Errorf("orderService.ConfirmPayment: update payment: %w", err)
 	}
+	order.PaymentStatus = "paid"
+	order.PaidAt = &now
 	s.publishOrderConfirmed(ctx, order)
 	return nil
 }
