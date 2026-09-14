@@ -103,7 +103,10 @@ func (h *OrderHandler) TochkaWebhook(w http.ResponseWriter, r *http.Request) {
 	claims, err := h.webhookVerifier.Verify(r.Context(), string(body))
 	if err != nil {
 		slog.Warn("invalid Tochka webhook", "err", err)
-		writeError(w, http.StatusUnauthorized, "invalid webhook")
+		// Точка отправляет тестовый запрос при регистрации вебхука. Его тело может
+		// не быть подписанным, но банк ожидает HTTP 200. Необработанные данные не
+		// влияют на заказ — возврат нужен только чтобы подтвердить доступность URL.
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 	if asString(claims["webhookType"]) != "acquiringInternetPayment" || asString(claims["status"]) != "APPROVED" || asString(claims["paymentType"]) != "sbp" {
