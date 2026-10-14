@@ -126,6 +126,10 @@ func (r *postgresProductRepo) ListPaged(ctx context.Context, f domain.ProductFil
 	if err := rows.Err(); err != nil {
 		return domain.ProductPage{}, fmt.Errorf("postgres.ProductRepo.ListPaged: %w", err)
 	}
+	// Release the connection before loading specs. Keeping rows open here means
+	// every concurrent catalog request holds one pool connection while trying to
+	// acquire another one in loadSpecs, which can exhaust the pool.
+	rows.Close()
 
 	if len(products) > 0 {
 		ids := make([]uuid.UUID, len(products))
@@ -162,6 +166,9 @@ func (r *postgresProductRepo) getOne(ctx context.Context, query string, args ...
 	if err != nil {
 		return nil, err
 	}
+	// loadSpecs issues a separate query, so it must not run while this query is
+	// still holding a connection from the pool.
+	rows.Close()
 
 	specsMap, err := r.loadSpecs(ctx, []uuid.UUID{p.ID})
 	if err != nil {
